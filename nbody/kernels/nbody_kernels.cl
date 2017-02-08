@@ -1406,25 +1406,34 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
 
-  __local volatile real dMinX[EFFNBODY], dMinY[EFFNBODY], dMinZ[EFFNBODY];
-  __local volatile real dMaxX[EFFNBODY], dMaxY[EFFNBODY], dMaxZ[EFFNBODY];
 
-  if(g == 0){
-    dMinX[0] = x[0];
-    dMinY[0] = y[0];
-    dMinZ[0] = z[0];
-  }
+  xMax[g] = xMin[g] = x[g];
+  yMax[g] = yMin[g] = y[g];
+  zMax[g] = zMin[g] = z[g];
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
-  dMinX[g] = dMaxX[g] = dMinX[0];
-  dMinY[g] = dMaxY[g] = dMinY[0];
-  dMinZ[g] = dMaxZ[g] = dMinZ[0];
+  int iter = (int)log2((real)EFFNBODY);
 
-  *xMin = get_local_size(0);
-  *xMax = get_num_groups(0);
-  *yMin = 10.0;
-  *yMax = 10.0;
-  *zMin = 10.0;
-  *zMax = 10.0;
+  for(int i = 0; i < iter; ++i){
+    int expVal = (int)exp2((real)i);
+    if(g % (expVal * 2) == 0){
+      int gt = xMax[g] > xMax[g + expVal];
+      int lt = xMin[g] < xMin[g + expVal];
+      xMax[g] = xMax[g] * gt + xMax[g + expVal] * (gt^1);
+      xMin[g] = xMin[g] * lt + xMin[g + expVal] * (lt^1);
+      x[g] = (real)gt * i;
+
+      gt = yMax[g] > yMax[g + expVal];
+      lt = yMin[g] < yMin[g + expVal];
+      yMax[g] = yMax[g] * gt + yMax[g + expVal] * (gt^1);
+      yMin[g] = yMin[g] * lt + yMin[g + expVal] * (lt^1);
+
+      gt = zMax[g] > zMax[g + expVal];
+      lt = zMin[g] < zMin[g + expVal];
+      zMax[g] = zMax[g] * gt + zMax[g + expVal] * (gt^1);
+      zMin[g] = zMin[g] * lt + zMin[g + expVal] * (lt^1);
+    }
+    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+  }
 }

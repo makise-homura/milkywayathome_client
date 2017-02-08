@@ -34,7 +34,7 @@ function makeContext()
       timeEvolve = evolveTime * sqr(1/10.0) * sqrt((pi_4_3 * cube(r0)) / (encMass + dwarfMass)),
       timestep   = sqr(1/10.0) * sqrt((pi_4_3 * cube(r0)) / (encMass + dwarfMass)),
       eps2       = calculateEps2(totalBodies, r0),
-      criterion  = "EXACT",
+      criterion  = "NewCriterion",
       useQuad    = true,
       theta      = 1.0
    }
@@ -45,7 +45,8 @@ r = 28.6
 -- Also required
 function makeBodies(ctx, potential)
     local firstModel
-    position = lbrToCartesian(ctx, Vector.create(l,b,r))
+    -- position = lbrToCartesian(ctx, Vector.create(l,b,r))
+    position = Vector.create(0,0,0)
     local finalPosition, finalVelocity = position, Vector.create(0,0,0)
 
   -- local finalPosition, finalVelocity = reverseOrbit{

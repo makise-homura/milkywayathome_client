@@ -1432,7 +1432,7 @@ static cl_int nbExecuteForceKernels(NBodyState* st, cl_bool updateState)
     else
     {
         forceKern = kernels->forceCalculation;
-        global[0] = st->gpuTreeSize;
+        global[0] = st->effNBody;
         local[0] = 4;
     }
     //Run kernel:
@@ -1481,7 +1481,7 @@ static cl_int nbAdvanceHalfVelocity(NBodyState* st, cl_bool updateState)
 
     
     velKern = kernels->advanceHalfVelocity;
-    global[0] = st->gpuTreeSize;
+    global[0] = st->effNBody;
     local[0] = 4;
     
     cl_event ev;
@@ -1513,7 +1513,7 @@ static cl_int nbAdvancePosition(NBodyState* st, cl_bool updateState)
 
     
     posKern = kernels->advancePosition;
-    global[0] = st->gpuTreeSize;
+    global[0] = st->effNBody;
     local[0] = 4;
     
     cl_event ev;
@@ -1544,12 +1544,45 @@ static cl_int nbOutputData(NBodyState* st, cl_bool updateState)
     cl_int effNBody = st->effNBody;
     
     dataOut = kernels->outputData;
-    global[0] = st->gpuTreeSize;
+    global[0] = st->effNBody;
     //printf("GLOBAL WORKGROUP SIZE: %d\n", global[0]);
     local[0] = 4;
     
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, dataOut, 1,
+                                    0, global, local,
+                                    0, NULL, &ev);
+    if (err != CL_SUCCESS)
+        return err;
+    clWaitForEvents(1, &ev);
+    clFinish(ci->queue);
+    return CL_SUCCESS;
+}
+
+
+static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
+{
+    cl_int err;
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event boundingEv;
+    cl_kernel boundingBox;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+    
+    boundingBox = kernels->boundingBox;
+    global[0] = st->effNBody;
+    local[0] = 1;
+    
+    cl_event ev;
+    err = clEnqueueNDRangeKernel(ci->queue, boundingBox, 1,
                                     0, global, local,
                                     0, NULL, &ev);
     if (err != CL_SUCCESS)
@@ -1798,8 +1831,8 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
       st->nbb->vel[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
       st->nbb->acc[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));      
       if(!st->usesExact){
-        st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, sizeof(real));
-        st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, sizeof(real));
+        st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
+        st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
       }
     }
     st->nbb->mass = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
@@ -2417,15 +2450,15 @@ void initGPUDataArrays(NBodyState* st, gpuData* gData){
     gData->vel[i] = calloc(n, sizeof(real));
     gData->acc[i] = calloc(n, sizeof(real));
     if(!st->usesExact){
-      // gData->max[i] = calloc(n, sizeof(real));
-      // gData->min[i] = calloc(n, sizeof(real));
+      gData->max[i] = calloc(n, sizeof(real));
+      gData->min[i] = calloc(n, sizeof(real));
     }
   }
   gData->mass = calloc(n, sizeof(real));
 }
 
 void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
-  int n = st->gpuTreeSize;
+  int n = st->effNBody;
   for(int i = 0; i < n; ++i){
     if(i < st->nbody){
       gData->pos[0][i] = st->bodytab[i].bodynode.pos.x;
@@ -2455,7 +2488,7 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
 }
 
 void writeGPUBuffers(NBodyState* st, gpuData* gData){
-  printf("WRITING TO GPU BUFFERS: %f\n", gData->max[0]);
+  printf("WRITING TO GPU BUFFERS: %f\n", gData->max[0][0]);
   CLInfo* ci = st->ci;   
   cl_int err = CL_SUCCESS;
   cl_uint i;
@@ -2481,12 +2514,12 @@ void writeGPUBuffers(NBodyState* st, gpuData* gData){
         err |= clEnqueueWriteBuffer(st->ci->queue,
                             st->nbb->max[i],
                             CL_TRUE,
-                            0, sizeof(real), &(gData->max[i]),
+                            0, n * sizeof(real), (gData->max[i]),
                             0, NULL, NULL);
         err |= clEnqueueWriteBuffer(st->ci->queue,
                             st->nbb->min[i],
                             CL_TRUE,
-                            0, sizeof(real), &(gData->min[i]),
+                            0, n * sizeof(real), (gData->min[i]),
                             0, NULL, NULL);
     }
   }
@@ -2528,12 +2561,12 @@ void readGPUBuffers(NBodyState* st, gpuData* gData){
         err |= clEnqueueReadBuffer(st->ci->queue,
                             st->nbb->max[i],
                             CL_TRUE,
-                            0, sizeof(real), &(gData->max[i]),
+                            0, n * sizeof(real), (gData->max[i]),
                             0, NULL, NULL);
         err |= clEnqueueReadBuffer(st->ci->queue,
                             st->nbb->min[i],
                             CL_TRUE,
-                            0, sizeof(real), &(gData->min[i]),
+                            0, n * sizeof(real), (gData->min[i]),
                             0, NULL, NULL);
     }
   }
@@ -2603,38 +2636,6 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
 }
 
 
-static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
-{
-    cl_int err;
-    size_t chunk;
-    size_t nChunk;
-    cl_int upperBound;
-    size_t global[1];
-    size_t local[1];
-    size_t offset[1];
-    cl_event boundingEv;
-    cl_kernel boundingBox;
-    CLInfo* ci = st->ci;
-    NBodyKernels* kernels = st->kernels;
-    NBodyWorkSizes* ws = st->workSizes;
-    cl_int effNBody = st->effNBody;
-
-    
-    boundingBox = kernels->boundingBox;
-    global[0] = st->gpuTreeSize;
-    local[0] = 4;
-    
-    cl_event ev;
-    err = clEnqueueNDRangeKernel(ci->queue, boundingBox, 1,
-                                    0, global, local,
-                                    0, NULL, &ev);
-    if (err != CL_SUCCESS)
-        return err;
-    clWaitForEvents(1, &ev);
-    clFinish(ci->queue);
-    return CL_SUCCESS;
-}
-
 //TODO: Write Barnes-Hut kernel handler
 NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
 {
@@ -2646,10 +2647,6 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
   cl_command_queue q = st->ci->queue;
   gpuData gData;
   initGPUDataArrays(st, &gData);
-  for(int i = 0; i < 3; ++i){
-    gData.max[i] = 100;
-    gData.min[i] = 200;
-  }
   fillGPUDataOnlyBodies(st, &gData);
   int n = st->effNBody;
   writeGPUBuffers(st, &gData);
@@ -2661,13 +2658,17 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
       return NBODY_CL_ERROR;
   }
   readGPUBuffers(st, &gData);
+  for(int j = 0; j < st->effNBody; ++j){
+    printf("%f\n", gData.pos[0][j]);
+  }
   printf("----------------------------\n");
   printf("BOUNDING BOX:\n");
   printf("        X        Y       Z\n");
   printf("----------------------------\n");
-  printf("MAX: %.2f | %.2f | %.2f\nMIN: %.2f | %.2f | %.2f\n", gData.max[0], gData.max[1], gData.max[2],
-                                                gData.min[0], gData.min[1], gData.min[2]);
+  printf("MAX: %.2f | %.2f | %.2f\nMIN: %.2f | %.2f | %.2f\n", gData.max[0][0], gData.max[1][0], gData.max[2][0],
+                                                gData.min[0][0], gData.min[1][0], gData.min[2][0]);
   printf("----------------------------\n");
+  fflush(NULL);
 }
 
 NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
