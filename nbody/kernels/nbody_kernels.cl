@@ -1405,6 +1405,7 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
  
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
+  uint group = (uint) get_group_id(0);
 
 
   xMax[g] = xMin[g] = x[g];

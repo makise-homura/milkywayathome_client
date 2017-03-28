@@ -271,7 +271,6 @@ cl_bool nbSetThreadCounts(NBodyWorkSizes* ws, const DevInfo* di, const NBodyCtx*
     }
     else if (mwMinComputeCapabilityCheck(di, 2, 0))
     {
-      printf("WE'RE RUNNING<<<<\n");
         ws->factors[0] = 1;
         ws->factors[1] = 1;
         ws->factors[2] = 1;
@@ -704,16 +703,6 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
             &&  kernels->advancePosition
             &&  kernels->outputData
             &&  kernels->boundingBox);
-//     return (   kernels->boundingBox
-//             && kernels->buildTreeClear
-//             && kernels->buildTree
-//             && kernels->summarizationClear
-//             && kernels->summarization
-//             && kernels->quadMoments
-//             && kernels->sort
-//             && kernels->forceCalculation
-//             && kernels->integration
-//             && kernels->forceCalculation_Exact);
 }
 
 //NOTE: This function is necessary:
@@ -1426,7 +1415,7 @@ static cl_int nbExecuteForceKernels(NBodyState* st, cl_bool updateState)
     if (st->usesExact)
     {
         forceKern = kernels->forceCalculationExact;
-        global[0] = st->gpuTreeSize;
+        global[0] = st->effNBody;
         local[0] = 4;
     }
     else
@@ -1579,7 +1568,11 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     
     boundingBox = kernels->boundingBox;
     global[0] = st->effNBody;
-    local[0] = 1;
+    local[0] = ws->local[0];
+    int iterations = ceil(log(st->effNBody)/log(local[0]));
+    printf("EFFNBODY: %d\n", st->effNBody);
+    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
+    printf("ITERATIONS REQUIRED: %d\n", iterations);
     
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, boundingBox, 1,
@@ -1802,6 +1795,7 @@ cl_int nbFindEffectiveNBody(const NBodyWorkSizes* workSizes, cl_bool exact, cl_i
     else
     {
         /* Maybe tree construction will need this later */
+        // return mwNextMultiple((cl_int) workSizes->local[7], nbody);
         return nbody;
     }
 }
@@ -2306,7 +2300,7 @@ static cl_int nbDebugSummarization(const NBodyCtx* ctx, NBodyState* st)
 
 void fillGPUTreeOnlyBodies(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT)
 {
-  for(int i = 0; i < st->gpuTreeSize; ++i){
+  for(int i = 0; i < st->effNBody; ++i){
     if(i < st->nbody){
       gpT[i].isBody = 1;
       gpT[i].pos[0] = st->bodytab[i].bodynode.pos.x;
@@ -2419,7 +2413,7 @@ void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
             if(More(q) == NULL){
                 printf("Interesting:\n");
             }
-            if(gpT[n].more > (st->gpuTreeSize)){
+            if(gpT[n].more > (st->nbody)){
                 printf("OOPS M8: %i\n", gpT[n].more);
             }
             q = More(q); //If we are in a cell, we must go deeper
@@ -2428,7 +2422,7 @@ void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
         ++n; //Increment our index
         //printf("%i \n", n);
     }
-    while(n <  st->gpuTreeSize){ //FILL EMPTY GPU TREE SPOTS:
+    while(n <  st->effNBody){ //FILL EMPTY GPU TREE SPOTS:
       gpT[n].mass = 0;
       gpT[n].bodyID = -1;
       gpT[n].isBody = 0;
@@ -2444,7 +2438,7 @@ void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
 }
 
 void initGPUDataArrays(NBodyState* st, gpuData* gData){
-  int n = st->gpuTreeSize;
+  int n = st->effNBody;
   for(int i = 0; i < 3; ++i){
     gData->pos[i] = calloc(n, sizeof(real));
     gData->vel[i] = calloc(n, sizeof(real));
@@ -2471,6 +2465,14 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
       gData->acc[1][i] = 0;
       gData->acc[2][i] = 0;
       gData->mass[i] = st->bodytab[i].bodynode.mass;
+      if(!st->usesExact){
+        gData->max[0][i] = 0;
+        gData->max[1][i] = 0;
+        gData->max[2][i] = 0;
+        gData->min[0][i] = 0;
+        gData->min[1][i] = 0;
+        gData->min[2][i] = 0;
+      }
     }
     else{
       gData->pos[0][i] = 0;
@@ -2483,6 +2485,14 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
       gData->acc[1][i] = 0;
       gData->acc[2][i] = 0;
       gData->mass[i] = 0;
+      if(!st->usesExact){
+        gData->max[0][i] = -INFINITY;
+        gData->max[1][i] = -INFINITY;
+        gData->max[2][i] = -INFINITY;
+        gData->min[0][i] = INFINITY;
+        gData->min[1][i] = INFINITY;
+        gData->min[2][i] = INFINITY;
+      }
     }
   }
 }
@@ -2651,6 +2661,8 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
   int n = st->effNBody;
   writeGPUBuffers(st, &gData);
 
+
+  //HANDLE RUNNING BOUNDING BOX HERE:
   err = nbBoundingBox(st, CL_TRUE);
   if (err != CL_SUCCESS)
   {
@@ -2658,9 +2670,9 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
       return NBODY_CL_ERROR;
   }
   readGPUBuffers(st, &gData);
-  for(int j = 0; j < st->effNBody; ++j){
-    printf("%f\n", gData.pos[0][j]);
-  }
+  // for(int j = 0; j < st->effNBody; ++j){
+  //   printf("%.3f | %.3f | %.3f || %.3f | %.3f\n", gData.pos[0][j], gData.pos[1][j], gData.pos[2][j], gData.max[0][j], gData.max[1][j]);
+  // }
   printf("----------------------------\n");
   printf("BOUNDING BOX:\n");
   printf("        X        Y       Z\n");
@@ -2678,7 +2690,7 @@ NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
 }
 
 NBodyStatus nbStripBodies(NBodyState* st, gpuTree* gpuData){ //Function to strip bodies out of GPU Tree
-    int n = st->gpuTreeSize;
+    int n = st->effNBody;
     int j = 0;
     int minimumBID = n;
     for(int i = 0; i < n; ++i){
