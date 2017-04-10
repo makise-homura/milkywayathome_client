@@ -1406,7 +1406,13 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
   uint group = (uint) get_group_id(0);
+  //Create local variables and copy global data into them:
+  __local real maxTemp[3][WARPSIZE + 1];
+  __local real minTemp[3][WARPSIZE + 1];
 
+  maxTemp[0][l] = minTemp[0][l] = x[g];
+  maxTemp[1][l] = minTemp[1][l] = y[g];
+  maxTemp[2][l] = minTemp[2][l] = z[g];
 
   xMax[g] = xMin[g] = x[g];
   yMax[g] = yMin[g] = y[g];
@@ -1414,27 +1420,39 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
-  int iter = (int)log2((real)EFFNBODY);
+  int iter = (int)log2((real)WARPSIZE);
 
   for(int i = 0; i < iter; ++i){
     int expVal = (int)exp2((real)i);
-    if(g % (expVal * 2) == 0){
-      int gt = xMax[g] > xMax[g + expVal];
-      int lt = xMin[g] < xMin[g + expVal];
-      xMax[g] = xMax[g] * gt + xMax[g + expVal] * (gt^1);
-      xMin[g] = xMin[g] * lt + xMin[g + expVal] * (lt^1);
-      x[g] = (real)gt * i;
+    int nextVal = min((int)l + expVal, (int)WARPSIZE - 1);
+    if(l % (expVal) * 2 == 0){
+      int gt = maxTemp[0][l] > maxTemp[0][nextVal];
+      int lt = minTemp[0][l] < minTemp[0][nextVal];
+      maxTemp[0][l] = maxTemp[0][l] * gt + maxTemp[0][nextVal] * (gt^1);
+      minTemp[0][l] = minTemp[0][l] * lt + minTemp[0][nextVal] * (lt^1);
 
-      gt = yMax[g] > yMax[g + expVal];
-      lt = yMin[g] < yMin[g + expVal];
-      yMax[g] = yMax[g] * gt + yMax[g + expVal] * (gt^1);
-      yMin[g] = yMin[g] * lt + yMin[g + expVal] * (lt^1);
+      gt = maxTemp[1][l] > maxTemp[1][nextVal];
+      lt = minTemp[1][l] < minTemp[1][nextVal];
+      maxTemp[1][l] = maxTemp[1][l] * gt + maxTemp[1][nextVal] * (gt^1);
+      minTemp[1][l] = minTemp[1][l] * lt + minTemp[1][nextVal] * (lt^1);
 
-      gt = zMax[g] > zMax[g + expVal];
-      lt = zMin[g] < zMin[g + expVal];
-      zMax[g] = zMax[g] * gt + zMax[g + expVal] * (gt^1);
-      zMin[g] = zMin[g] * lt + zMin[g + expVal] * (lt^1);
+      gt = maxTemp[2][l] > maxTemp[2][nextVal];
+      lt = minTemp[2][l] < minTemp[2][nextVal];
+      maxTemp[2][l] = maxTemp[2][l] * gt + maxTemp[2][nextVal] * (gt^1);
+      minTemp[2][l] = minTemp[2][l] * lt + minTemp[2][nextVal] * (lt^1);
     }
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+
   }
+  
+  //Copy back from local memory to global memory:
+  //TODO: perform reduction of data
+
+  xMax[g] = maxTemp[0][l];
+  xMin[g] = minTemp[0][l];
+  yMax[g] = maxTemp[1][l];
+  yMin[g] = minTemp[1][l];
+  zMax[g] = maxTemp[2][l];
+  zMin[g] = minTemp[2][l];
+
 }

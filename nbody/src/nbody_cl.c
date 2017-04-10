@@ -1565,6 +1565,15 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     NBodyWorkSizes* ws = st->workSizes;
     cl_int effNBody = st->effNBody;
 
+    real** tempMax = calloc(3, sizeof(real*));
+    real** tempMin = calloc(3, sizeof(real*));
+    //Initialize to all zeroes:
+    for(int i = 0; i < 3; ++i){
+        tempMax[i] = calloc(st->effNBody, sizeof(real));
+        tempMin[i] = calloc(st->effNBody, sizeof(real));
+    }
+
+
     
     boundingBox = kernels->boundingBox;
     global[0] = st->effNBody;
@@ -1575,13 +1584,42 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     printf("ITERATIONS REQUIRED: %d\n", iterations);
     
     cl_event ev;
-    err = clEnqueueNDRangeKernel(ci->queue, boundingBox, 1,
+    for(int i = 0; i < iterations; ++i){
+        err = clEnqueueNDRangeKernel(ci->queue, boundingBox, 1,
                                     0, global, local,
                                     0, NULL, &ev);
-    if (err != CL_SUCCESS)
+        if (err != CL_SUCCESS)
         return err;
-    clWaitForEvents(1, &ev);
-    clFinish(ci->queue);
+        if(i < iterations - 1){
+            for(int j = 0; j < 3; ++j){
+                err |= clEnqueueReadBuffer(st->ci->queue,
+                                    st->nbb->max[j],
+                                    CL_TRUE,
+                                    0, st->effNBody * sizeof(real), (tempMax[j]),
+                                    0, NULL, NULL);
+                err |= clEnqueueReadBuffer(st->ci->queue,
+                                    st->nbb->min[j],
+                                    CL_TRUE,
+                                    0, st->effNBody * sizeof(real), (tempMin[j]),
+                                    0, NULL, NULL);
+
+
+                err |= clEnqueueWriteBuffer(st->ci->queue,
+                                st->nbb->max[j],
+                                CL_TRUE,
+                                0, st->effNBody * sizeof(real), (tempMax[j]),
+                                0, NULL, NULL);
+                err |= clEnqueueWriteBuffer(st->ci->queue,
+                                st->nbb->min[j],
+                                CL_TRUE,
+                                0, st->effNBody * sizeof(real), (tempMin[j]),
+                                0, NULL, NULL);
+            }
+            clWaitForEvents(1, &ev);
+            clFinish(ci->queue);
+        }
+    }
+    
     return CL_SUCCESS;
 }
 
