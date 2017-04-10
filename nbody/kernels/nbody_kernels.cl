@@ -1410,13 +1410,17 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
   __local real maxTemp[3][WARPSIZE + 1];
   __local real minTemp[3][WARPSIZE + 1];
 
-  maxTemp[0][l] = minTemp[0][l] = x[g];
-  maxTemp[1][l] = minTemp[1][l] = y[g];
-  maxTemp[2][l] = minTemp[2][l] = z[g];
+  maxTemp[0][l] = xMax[g];
+  maxTemp[1][l] = yMax[g];
+  maxTemp[2][l] = zMax[g];
 
-  xMax[g] = xMin[g] = x[g];
-  yMax[g] = yMin[g] = y[g];
-  zMax[g] = zMin[g] = z[g];
+  minTemp[0][l] = xMin[g];
+  minTemp[1][l] = yMin[g];
+  minTemp[2][l] = zMin[g];
+
+  // xMax[g] = xMin[g] = x[g];
+  // yMax[g] = yMin[g] = y[g];
+  // zMax[g] = zMin[g] = z[g];
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
@@ -1447,12 +1451,15 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
   
   //Copy back from local memory to global memory:
   //TODO: perform reduction of data
-
-  xMax[g] = maxTemp[0][l];
-  xMin[g] = minTemp[0][l];
-  yMax[g] = maxTemp[1][l];
-  yMin[g] = minTemp[1][l];
-  zMax[g] = maxTemp[2][l];
-  zMin[g] = minTemp[2][l];
+  
+  if(l == 0){
+    xMax[group] = maxTemp[0][l];
+    xMin[group] = minTemp[0][l];
+    yMax[group] = maxTemp[1][l];
+    yMin[group] = minTemp[1][l];
+    zMax[group] = maxTemp[2][l];
+    zMin[group] = minTemp[2][l];
+  }
+  barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
 }

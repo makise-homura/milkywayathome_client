@@ -1592,28 +1592,28 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
         return err;
         if(i < iterations - 1){
             for(int j = 0; j < 3; ++j){
-                err |= clEnqueueReadBuffer(st->ci->queue,
-                                    st->nbb->max[j],
-                                    CL_TRUE,
-                                    0, st->effNBody * sizeof(real), (tempMax[j]),
-                                    0, NULL, NULL);
-                err |= clEnqueueReadBuffer(st->ci->queue,
-                                    st->nbb->min[j],
-                                    CL_TRUE,
-                                    0, st->effNBody * sizeof(real), (tempMin[j]),
-                                    0, NULL, NULL);
+                // err |= clEnqueueReadBuffer(st->ci->queue,
+                //                     st->nbb->max[j],
+                //                     CL_TRUE,
+                //                     0, st->effNBody * sizeof(real), (tempMax[j]),
+                //                     0, NULL, NULL);
+                // err |= clEnqueueReadBuffer(st->ci->queue,
+                //                     st->nbb->min[j],
+                //                     CL_TRUE,
+                //                     0, st->effNBody * sizeof(real), (tempMin[j]),
+                //                     0, NULL, NULL);
 
 
-                err |= clEnqueueWriteBuffer(st->ci->queue,
-                                st->nbb->max[j],
-                                CL_TRUE,
-                                0, st->effNBody * sizeof(real), (tempMax[j]),
-                                0, NULL, NULL);
-                err |= clEnqueueWriteBuffer(st->ci->queue,
-                                st->nbb->min[j],
-                                CL_TRUE,
-                                0, st->effNBody * sizeof(real), (tempMin[j]),
-                                0, NULL, NULL);
+                // err |= clEnqueueWriteBuffer(st->ci->queue,
+                //                 st->nbb->max[j],
+                //                 CL_TRUE,
+                //                 0, st->effNBody * sizeof(real), (tempMax[j]),
+                //                 0, NULL, NULL);
+                // err |= clEnqueueWriteBuffer(st->ci->queue,
+                //                 st->nbb->min[j],
+                //                 CL_TRUE,
+                //                 0, st->effNBody * sizeof(real), (tempMin[j]),
+                //                 0, NULL, NULL);
             }
             clWaitForEvents(1, &ev);
             clFinish(ci->queue);
@@ -2504,12 +2504,12 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
       gData->acc[2][i] = 0;
       gData->mass[i] = st->bodytab[i].bodynode.mass;
       if(!st->usesExact){
-        gData->max[0][i] = 0;
-        gData->max[1][i] = 0;
-        gData->max[2][i] = 0;
-        gData->min[0][i] = 0;
-        gData->min[1][i] = 0;
-        gData->min[2][i] = 0;
+        gData->max[0][i] = st->bodytab[i].bodynode.pos.x;
+        gData->max[1][i] = st->bodytab[i].bodynode.pos.y;
+        gData->max[2][i] = st->bodytab[i].bodynode.pos.z;
+        gData->min[0][i] = st->bodytab[i].bodynode.pos.x;
+        gData->min[1][i] = st->bodytab[i].bodynode.pos.y;
+        gData->min[2][i] = st->bodytab[i].bodynode.pos.z;
       }
     }
     else{
