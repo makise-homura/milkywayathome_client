@@ -289,6 +289,7 @@ typedef struct MW_ALIGN_TYPE
     time_t lastCheckpoint;
 
     unsigned int step;
+    int ramping; // boolean
     int nbody;
     int effNBody;            /* Sometimes needed rounded up number of bodies. >= nbody are just padding */
     int treeIncest;          /* Tree incest has occured */
@@ -319,7 +320,7 @@ typedef struct MW_ALIGN_TYPE
 
 #define NBODYSTATE_TYPE "NBodyState"
 
-#define EMPTY_NBODYSTATE { EMPTY_TREE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL, NULL, NULL, NULL }
+#define EMPTY_NBODYSTATE { EMPTY_TREE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL, NULL, NULL, NULL }
 
 
 typedef struct
@@ -396,7 +397,7 @@ typedef struct MW_ALIGN_TYPE
 
     Potential pot;
 
-    float ramp; /*ramping parameter fraction*/
+    real ramp; /*ramping parameter fraction*/
 } NBodyCtx;
 
 #define NBODYCTX_TYPE "NBodyCtx"

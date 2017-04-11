@@ -19,10 +19,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include "nbody_priv.h"
 #include "nbody_util.h"
 #include "nbody_grav.h"
 #include "milkyway_util.h"
+#include "nbody_coordinates.h"
 
 #ifdef _OPENMP
   #include <omp.h>
@@ -133,13 +135,19 @@ static inline void nbMapForceBody(const NBodyCtx* ctx, NBodyState* st)
     const Body* bodies = mw_assume_aligned(st->bodytab, 16);
     mwvector* accels = mw_assume_aligned(st->acctab, 16);
 
-    real ramp_frac = (real)ctx->nStep * (real)ctx->ramp; //number of timesteps we want the ramping parameter to take
+    real ramp_frac = (real)  ctx->nStep * (real) ctx->ramp; //number of timesteps we want the ramping parameter to take
+    //mw_printf("%.15f %.15f %.15f %.15f\n", ramp_frac, (real)ctx->nStep, (real)ctx->ramp, (real)ctx->nStep * (real)ctx->ramp);
 
+    /*#ifndef fp // for writing to a file
+        FILE* fr;
+    #endif
+        fr = fopen("nonRamp_orbit.txt","a+");*/
 
 
   #ifdef _OPENMP
     #pragma omp parallel for private(i, b, a, externAcc) shared(bodies, accels) schedule(dynamic, 4096 / sizeof(accels[0]))
   #endif
+
     for (i = 0; i < nbody; ++i)      /* get force on each body */
     {
         /* Repeat the base hackGrav part in each case or else GCC's
@@ -153,12 +161,25 @@ static inline void nbMapForceBody(const NBodyCtx* ctx, NBodyState* st)
                 a = nbGravity(ctx, st, b);
 		
 		externAcc = nbExtAcceleration(&ctx->pot,  Pos(b));
-		if(st->step < ramp_frac){// ramp potential
 
+		//mw_printf("%i %.15f\n", st->step, ramp_frac); checking ramp parameter tests
+                /*mwvector test_vector= {3.0,4.0,5.0};
+		test_vector = mw_mulsv(test_vector,2.0);
+		mw_printf("%.15f %.15f %.15f\n", test_vector.x, test_vector.y, test_vector.z);*/
+
+
+		/*if((real)st->step < (real)ramp_frac)
+                {// ramp potential
+		    //mw_printf("%.15f %.15f %.15f\n", (real)st->step, ramp_frac, (real)st->step/ramp_frac);
                     externAcc = mw_mulsv(externAcc, (real)st->step/(real)ramp_frac);
-		}
+                    //mw_printf("%.15f %.15f %.15f\n", ramp_frac, (real)st->step, (real)st->step/(real)ramp_frac);
+		}*/ // removing ramp parameter temporarily
                 mw_incaddv(a, externAcc);
                 accels[i] = a;
+
+		//mwvector COM = nbCenterOfMass(st); // calculating COM for tests
+
+                //fprintf(fr,"%.5f %.5f %.5f\n", X(COM), Y(COM), Z(COM));
                 break;
 
             case EXTERNAL_POTENTIAL_NONE:

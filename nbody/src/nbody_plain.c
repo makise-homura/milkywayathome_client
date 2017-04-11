@@ -18,6 +18,7 @@
  * along with Milkyway@Home.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include "nbody_plain.h"
 #include "nbody_shmem.h"
 #include "nbody_curses.h"
@@ -89,15 +90,43 @@ static inline void advancePosVel(NBodyState* st, const int nbody, const real dt)
     Body* bodies = mw_assume_aligned(st->bodytab, 16);
     const mwvector* accs = mw_assume_aligned(st->acctab, 16);
 
+    /*For writing to a file*/
+        #ifndef fp 
+            FILE* fr;
+        #endif
+        fr = fopen("ramping_pos_after_ramp","a+"); 
+    /*End file creation code*/  
+
   #ifdef _OPENMP
     #pragma omp parallel for private(i) shared(bodies, accs) schedule(dynamic, 4096 / sizeof(accs[0]))
   #endif
     for (i = 0; i < nbody; ++i)
     {
+
+        mwvector velocity = st->bodytab[i].vel;
+        mwvector position = st->bodytab[i].bodynode.pos;
         bodyAdvanceVel(&bodies[i], accs[i], dtHalf);
         bodyAdvancePos(&bodies[i], dt);
-    }
 
+        /*if(!st->ramping) // This is test code to check the orbit AFTER ramping
+        {
+            fprintf(fr, "%f %f %f %f %f %f\n"
+                                     , position.x
+                                     , position.y 
+                                     , position.z
+                                     , velocity.x
+                                     , velocity.y
+                                     , velocity.z);
+        }*/
+        if(st->step == 0)
+        {
+            fprintf(fr, "%f %f %f %f %f %f\n"
+                                , position.x
+                                , position.y
+                                , position.z);
+        }
+    }
+    fclose(fr);
 }
 
 static inline void advanceVelocities(NBodyState* st, const int nbody, const real dt)
@@ -120,6 +149,19 @@ static inline void advanceVelocities(NBodyState* st, const int nbody, const real
 NBodyStatus nbStepSystemPlain(const NBodyCtx* ctx, NBodyState* st)
 {
 
+
+    static mwvector initial_vel = ZERO_VECTOR;
+
+    if(mw_length(initial_vel) == 0)
+    {
+        initial_vel = mw_addv(initial_vel, nbCenterOfMom(st));
+    }
+    /*#ifndef initial_vel /*so we keep memory of the center of Momentum
+        static mwvector initial_vel;
+        mw_printf("%f %f %f\n", initial_vel.x, initial_vel.y, initial_vel.z);
+        initial_vel = nbCenterOfMom(st);
+    #endif*/
+
     NBodyStatus rc;
     const real dt = ctx->timestep;
 
@@ -134,6 +176,27 @@ NBodyStatus nbStepSystemPlain(const NBodyCtx* ctx, NBodyState* st)
         printf("Frame: %d\n", (int)(st->step));
     #endif
 
+    /* we implement two checks here, one to check that "ramping"
+    is still true and that we are within the ramping timstep period.
+    If we are not, ramping will still be true, so we must change it
+    to false, so the code will not execute ramping code, and reset the
+    timestep to 0*/
+    if ( st->ramping && (st->step < (ctx->ramp * ctx->nStep) ) )
+    {
+        subtractMassMomentumCenters(ctx, st);
+    }
+
+    else if (st-> ramping && st->step == 0)
+    {
+        st->ramping = 0;
+    }
+
+    else if(st->ramping)// && st->step >= ctx->ramp * ctx->nStep) 
+    {
+        resetVelocities(ctx, st, initial_vel);
+        st->ramping = 0; /*FIXME: later, change this to mwbool*/
+        st->step = 0;
+    }
     return rc;
 }
 
@@ -184,5 +247,3 @@ NBodyStatus nbRunSystemPlain(const NBodyCtx* ctx, NBodyState* st)
 
     return nbWriteFinalCheckpoint(ctx, st);
 }
-
-

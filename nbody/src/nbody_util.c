@@ -94,6 +94,72 @@ mwvector nbCenterOfMom(const NBodyState* st)
     return cm;
 }
 
+void subtractMassMomentumCenters(const NBodyCtx* ctx, NBodyState* st)
+{
+/* This function calculates the center of mass and momentum
+of a dwarf galaxy, and subtract each value from each body in the n-body
+simulation. This function is only called when the timestep is negative,
+meaning that we are in the "ramping" phase of the dwarf evolution */
+
+
+    mwvector CenterMass;
+    mwvector CenterMom;
+    const Body* b;
+    int nbody = st->nbody;
+    
+    CenterMass = nbCenterOfMass(st);
+    CenterMom = nbCenterOfMom(st);
+
+    /*We want to keep track of where the starting position was*/
+
+    // begining_pos and begining_mom are set as static variables so that
+    // time the function is called they hold their previous value, so
+    // we can hold memory of the begining mass and momentum centers
+    // throughout the duration of the simulation.
+    static mwvector begining_pos = ZERO_VECTOR;
+    static mwvector begining_mom = ZERO_VECTOR;
+
+    /* This will only execute the first time this function is called
+    meaning that the vectors will take the values of the initial
+    centers of mass and momentum*/
+    if(mw_length(begining_pos) == 0 && mw_length(begining_mom) == 0)
+    {
+        begining_pos = mw_addv(begining_pos, CenterMass);
+        begining_mom = mw_addv(begining_mom, CenterMom);
+    }
+
+
+    mwvector position_change = mw_subv(CenterMass, begining_pos);
+    mwvector mom_change = mw_subv(CenterMom, begining_mom);
+    
+    for ( int i = 0; i<nbody; ++i)
+    {
+        b = &st->bodytab[i]; // find out how to actually alter positions
+        mwvector velocity = st->bodytab[i].vel;
+        mwvector position = st->bodytab[i].bodynode.pos;
+        
+        
+        st->bodytab[i].vel = mw_subv(velocity,mom_change);
+        st->bodytab[i].bodynode.pos = mw_subv(position,position_change);
+        //printf("%f %f %f\n", velocity.x, velocity.y,velocity.z);
+    }
+    
+
+}
+
+void resetVelocities(const NBodyCtx* ctx, NBodyState* st, mwvector CenterMom)
+{
+    const Body* b;
+    int nbody = st->nbody;
+    //mw_printf("Reseting Velocities \n");
+    for ( int i = 0; i < nbody; ++i)
+    {
+        mwvector velocity = st->bodytab[i].vel;
+        st->bodytab[i].vel = mw_addv(velocity,CenterMom);
+    }
+}
+    
+
 static inline real log8(real x)
 {
     return mw_log(x) / mw_log(8.0);
@@ -197,4 +263,3 @@ void nbReportTreeIncest(const NBodyCtx* ctx, NBodyState* st)
         }
     }
 }
-

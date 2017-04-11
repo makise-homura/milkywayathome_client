@@ -174,7 +174,15 @@ void setInitialNBodyState(NBodyState* st, const NBodyCtx* ctx, Body* bodies, int
     st->usesExact = (ctx->criterion == Exact);
 
     st->tree.rsize = ctx->treeRSize;
-    st->step = 0;
+    st->step = 0; // so we start in "negative time" to begin ramping
+    if(ctx->ramp > 0.0)
+    {
+        st->ramping = 1;
+    }
+    else
+    {
+        st->ramping = 0;
+    }
     st->nbody = nbody;
     st->bodytab = bodies;
 
