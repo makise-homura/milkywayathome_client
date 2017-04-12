@@ -12,9 +12,8 @@ r0  = arg[3]
 
 dwarfMass  = arg[4]
 
-model1Bodies = 20000
+model1Bodies = 200000
 totalBodies = model1Bodies
-
 nbodyLikelihoodMethod = "EMD"
 nbodyMinVersion = "1.32"
 
