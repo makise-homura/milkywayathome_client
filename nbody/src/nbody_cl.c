@@ -1565,23 +1565,15 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     NBodyWorkSizes* ws = st->workSizes;
     cl_int effNBody = st->effNBody;
 
-    real** tempMax = calloc(3, sizeof(real*));
-    real** tempMin = calloc(3, sizeof(real*));
-    //Initialize to all zeroes:
-    for(int i = 0; i < 3; ++i){
-        tempMax[i] = calloc(st->effNBody, sizeof(real));
-        tempMin[i] = calloc(st->effNBody, sizeof(real));
-    }
-
 
     
     boundingBox = kernels->boundingBox;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = ceil(log(st->effNBody)/log(local[0]));
-    printf("EFFNBODY: %d\n", st->effNBody);
-    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
-    printf("ITERATIONS REQUIRED: %d\n", iterations);
+    // printf("EFFNBODY: %d\n", st->effNBody);
+    // printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
+    // printf("ITERATIONS REQUIRED: %d\n", iterations);
     
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
@@ -1590,36 +1582,9 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
                                     0, NULL, &ev);
         if (err != CL_SUCCESS)
         return err;
-        if(i < iterations - 1){
-            for(int j = 0; j < 3; ++j){
-                // err |= clEnqueueReadBuffer(st->ci->queue,
-                //                     st->nbb->max[j],
-                //                     CL_TRUE,
-                //                     0, st->effNBody * sizeof(real), (tempMax[j]),
-                //                     0, NULL, NULL);
-                // err |= clEnqueueReadBuffer(st->ci->queue,
-                //                     st->nbb->min[j],
-                //                     CL_TRUE,
-                //                     0, st->effNBody * sizeof(real), (tempMin[j]),
-                //                     0, NULL, NULL);
-
-
-                // err |= clEnqueueWriteBuffer(st->ci->queue,
-                //                 st->nbb->max[j],
-                //                 CL_TRUE,
-                //                 0, st->effNBody * sizeof(real), (tempMax[j]),
-                //                 0, NULL, NULL);
-                // err |= clEnqueueWriteBuffer(st->ci->queue,
-                //                 st->nbb->min[j],
-                //                 CL_TRUE,
-                //                 0, st->effNBody * sizeof(real), (tempMin[j]),
-                //                 0, NULL, NULL);
-            }
-            clWaitForEvents(1, &ev);
-            clFinish(ci->queue);
-        }
     }
-    
+
+    clFinish(ci->queue);    
     return CL_SUCCESS;
 }
 
@@ -2536,7 +2501,7 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
 }
 
 void writeGPUBuffers(NBodyState* st, gpuData* gData){
-  printf("WRITING TO GPU BUFFERS: %f\n", gData->max[0][0]);
+//   printf("WRITING TO GPU BUFFERS: %f\n", gData->max[0][0]);
   CLInfo* ci = st->ci;   
   cl_int err = CL_SUCCESS;
   cl_uint i;
@@ -2583,7 +2548,7 @@ void writeGPUBuffers(NBodyState* st, gpuData* gData){
 }
 
 void readGPUBuffers(NBodyState* st, gpuData* gData){
-  printf("READING FROM GPU BUFFERS\n");
+//   printf("READING FROM GPU BUFFERS\n");
   CLInfo* ci = st->ci;   
   cl_int err = CL_SUCCESS;
   cl_uint i;
@@ -2687,38 +2652,57 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
 //TODO: Write Barnes-Hut kernel handler
 NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
 {
-  printf("RUNNING OPENCL TREECODE NBODY APPLICATION\n");
-  printf("THE GPU TREE SIZE IS: %d\n", st->effNBody);
-  CLInfo* ci = st->ci;   
-  cl_int err;
-  cl_uint i;
-  cl_command_queue q = st->ci->queue;
-  gpuData gData;
-  initGPUDataArrays(st, &gData);
-  fillGPUDataOnlyBodies(st, &gData);
-  int n = st->effNBody;
-  writeGPUBuffers(st, &gData);
+    printf("RUNNING OPENCL TREECODE NBODY APPLICATION\n");
+    printf("THE GPU TREE SIZE IS: %d\n", st->effNBody);
+    CLInfo* ci = st->ci;   
+    cl_int err;
+    cl_uint i;
+    cl_command_queue q = st->ci->queue;
+    gpuData gData;
+    initGPUDataArrays(st, &gData);
+    fillGPUDataOnlyBodies(st, &gData);
+    int n = st->effNBody;
 
 
-  //HANDLE RUNNING BOUNDING BOX HERE:
-  err = nbBoundingBox(st, CL_TRUE);
-  if (err != CL_SUCCESS)
-  {
-      mwPerrorCL(err, "Error executing bounding box kernel");
-      return NBODY_CL_ERROR;
-  }
-  readGPUBuffers(st, &gData);
-  // for(int j = 0; j < st->effNBody; ++j){
-  //   printf("%.3f | %.3f | %.3f || %.3f | %.3f\n", gData.pos[0][j], gData.pos[1][j], gData.pos[2][j], gData.max[0][j], gData.max[1][j]);
-  // }
-  printf("----------------------------\n");
-  printf("BOUNDING BOX:\n");
-  printf("        X        Y       Z\n");
-  printf("----------------------------\n");
-  printf("MAX: %.2f | %.2f | %.2f\nMIN: %.2f | %.2f | %.2f\n", gData.max[0][0], gData.max[1][0], gData.max[2][0],
+    //BEGIN TIMING
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    // sleep(1);
+    writeGPUBuffers(st, &gData);
+
+
+    //HANDLE RUNNING BOUNDING BOX HERE:
+    err = nbBoundingBox(st, CL_TRUE);
+    if (err != CL_SUCCESS)
+    {
+        mwPerrorCL(err, "Error executing bounding box kernel");
+        return NBODY_CL_ERROR;
+    }
+    readGPUBuffers(st, &gData);
+    gettimeofday(&end, NULL);
+
+    // for(int j = 0; j < st->effNBody; ++j){
+    //   printf("%.3f | %.3f | %.3f || %.3f | %.3f\n", gData.pos[0][j], gData.pos[1][j], gData.pos[2][j], gData.max[0][j], gData.max[1][j]);
+    // }
+    printf("----------------------------\n");
+    printf("BOUNDING BOX:\n");
+    printf("        X        Y       Z\n");
+    printf("----------------------------\n");
+    printf("MAX: %.2f | %.2f | %.2f\nMIN: %.2f | %.2f | %.2f\n", gData.max[0][0], gData.max[1][0], gData.max[2][0],
                                                 gData.min[0][0], gData.min[1][0], gData.min[2][0]);
-  printf("----------------------------\n");
-  fflush(NULL);
+    printf("----------------------------\n");
+    fflush(NULL);
+
+    // real startT, endT;
+    // startT = (real)start.tv_sec + (1.0/1000000) * start.tv_usec;
+    // endT = (real)end.tv_sec + (1.0/1000000) * end.tv_usec;
+
+    printf("==============================\n");
+    printf("BOUNDING BOX EXECUTION TIME:\n");
+    // printf("%.4f ms\n", (endT - startT) * 1000);
+    printf("%.4f ms\n", (((real)end.tv_sec + (real)end.tv_usec * (1.0/1000000)) - ((real)start.tv_sec + (real)start.tv_usec * (1.0/1000000))) * 1000);
+    printf("==============================\n");
+    fflush(NULL);
 }
 
 NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
