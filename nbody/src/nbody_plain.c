@@ -190,7 +190,7 @@ NBodyStatus nbStepSystemPlain(const NBodyCtx* ctx, NBodyState* st)
     else if(st->ramping)// && st->step >= ctx->ramp * ctx->nStep) 
     {
         printf("Performing ramp\n");
-        resetVelocities(ctx, st, initial_vel);
+        //resetVelocities(ctx, st, initial_vel);
         st->ramping = FALSE; 
         st->step = 0;
     }

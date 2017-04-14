@@ -155,7 +155,7 @@ void resetVelocities(const NBodyCtx* ctx, NBodyState* st, mwvector CenterMom)
     for ( int i = 0; i < nbody; ++i)
     {
         mwvector velocity = st->bodytab[i].vel;
-        st->bodytab[i].vel = mw_addv(velocity,CenterMom);
+        //st->bodytab[i].vel = mw_addv(velocity,CenterMom);
     }
 }
     
