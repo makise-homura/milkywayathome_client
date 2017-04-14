@@ -289,7 +289,6 @@ typedef struct MW_ALIGN_TYPE
     time_t lastCheckpoint;
 
     unsigned int step;
-    int ramping; // boolean
     int nbody;
     int effNBody;            /* Sometimes needed rounded up number of bodies. >= nbody are just padding */
     int treeIncest;          /* Tree incest has occured */
@@ -305,6 +304,7 @@ typedef struct MW_ALIGN_TYPE
     mwbool usesCL;
     mwbool useCLCheckpointing;
     mwbool reportProgress;
+    mwbool ramping;
 
   #if NBODY_OPENCL
     CLInfo* ci;
@@ -320,7 +320,7 @@ typedef struct MW_ALIGN_TYPE
 
 #define NBODYSTATE_TYPE "NBodyState"
 
-#define EMPTY_NBODYSTATE { EMPTY_TREE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL, NULL, NULL, NULL }
+#define EMPTY_NBODYSTATE { EMPTY_TREE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, NULL, NULL, NULL, NULL }
 
 
 typedef struct
@@ -391,6 +391,7 @@ typedef struct MW_ALIGN_TYPE
     mwbool useQuad;           /* use quadrupole corrections */
     mwbool allowIncest;
     mwbool quietErrors;
+    mwbool useRamp;
 
     time_t checkpointT;       /* Period to checkpoint when not using BOINC */
     unsigned int nStep;
@@ -468,7 +469,7 @@ typedef enum
 #define EMPTY_TREE { NULL, 0.0, 0, 0, FALSE }
 #define EMPTY_NBODYCTX { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                  \
                          InvalidCriterion, EXTERNAL_POTENTIAL_DEFAULT,  \
-                         FALSE, FALSE, FALSE,                           \
+                         FALSE, FALSE, FALSE, FALSE,                    \
                          0, 0,                                          \
                          EMPTY_POTENTIAL, 0}
 

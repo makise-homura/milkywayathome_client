@@ -91,10 +91,10 @@ static inline void advancePosVel(NBodyState* st, const int nbody, const real dt)
     const mwvector* accs = mw_assume_aligned(st->acctab, 16);
 
     /*For writing to a file*/
-        #ifndef fp 
+        #ifndef fr
             FILE* fr;
         #endif
-        fr = fopen("ramping_pos_after_ramp","a+"); 
+        fr = fopen("evolution_histogram.out","a+"); 
     /*End file creation code*/  
 
   #ifdef _OPENMP
@@ -118,9 +118,9 @@ static inline void advancePosVel(NBodyState* st, const int nbody, const real dt)
                                      , velocity.y
                                      , velocity.z);
         }*/
-        if(st->step == 0)
+        if(!st->ramping && st->step % 400 == 0 && st->step != 0)
         {
-            fprintf(fr, "%f %f %f %f %f %f\n"
+            fprintf(fr, "%f %f %f\n"
                                 , position.x
                                 , position.y
                                 , position.z);
@@ -181,20 +181,17 @@ NBodyStatus nbStepSystemPlain(const NBodyCtx* ctx, NBodyState* st)
     If we are not, ramping will still be true, so we must change it
     to false, so the code will not execute ramping code, and reset the
     timestep to 0*/
-    if ( st->ramping && (st->step < (ctx->ramp * ctx->nStep) ) )
+    printf("%f %f %f\n", (real)st->step,(real)ctx->ramp,(real)ctx->nStep);
+    if ( st->ramping && ((real)st->step < ((real)ctx->ramp * (real)ctx->nStep) ) )
     {
+        printf("Performing ramp\n");
         subtractMassMomentumCenters(ctx, st);
     }
-
-    else if (st-> ramping && st->step == 0)
-    {
-        st->ramping = 0;
-    }
-
     else if(st->ramping)// && st->step >= ctx->ramp * ctx->nStep) 
     {
+        printf("Performing ramp\n");
         resetVelocities(ctx, st, initial_vel);
-        st->ramping = 0; /*FIXME: later, change this to mwbool*/
+        st->ramping = FALSE; 
         st->step = 0;
     }
     return rc;

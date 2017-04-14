@@ -96,6 +96,7 @@ static int createNBodyCtx(lua_State* luaSt)
             { "useQuad",     LUA_TBOOLEAN, NULL, FALSE, &ctx.useQuad     },
             { "allowIncest", LUA_TBOOLEAN, NULL, FALSE, &ctx.allowIncest },
             { "quietErrors", LUA_TBOOLEAN, NULL, FALSE, &ctx.quietErrors },
+            { "useRamp",     LUA_TBOOLEAN, NULL, FALSE, &ctx.useRamp     },
             { "ramp",        LUA_TNUMBER,  NULL, FALSE, &ctx.ramp        },
             END_MW_NAMED_ARG
         };
@@ -213,6 +214,7 @@ static const Xet_reg_pre gettersNBodyCtx[] =
     { "useQuad",         getBool,       offsetof(NBodyCtx, useQuad)     },
     { "allowIncest",     getBool,       offsetof(NBodyCtx, allowIncest) },
     { "quietErrors",     getBool,       offsetof(NBodyCtx, quietErrors) },
+    { "useRamp",         getBool,       offsetof(NBodyCtx, useRamp)     },
     { "ramp",            getNumber,     offsetof(NBodyCtx, ramp)        },
     { NULL, NULL, 0 }
 };
@@ -229,6 +231,7 @@ static const Xet_reg_pre settersNBodyCtx[] =
     { "useQuad",         setBool,       offsetof(NBodyCtx, useQuad)     },
     { "allowIncest",     setBool,       offsetof(NBodyCtx, allowIncest) },
     { "quietErrors",     setBool,       offsetof(NBodyCtx, quietErrors) },
+    { "useRamp",         setBool,       offsetof(NBodyCtx, useRamp)     },
     { "ramp",            setNumber,     offsetof(NBodyCtx, ramp)        },
     { NULL, NULL, 0 }
 };

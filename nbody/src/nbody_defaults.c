@@ -38,6 +38,7 @@ const NBodyCtx defaultNBodyCtx =
     /* .useQuad         */  DEFAULT_USE_QUADRUPOLE_MOMENTS,
     /* .allowIncest     */  DEFAULT_ALLOW_INCEST,
     /* .quietErrors     */  DEFAULT_QUIET_ERRORS,
+    /* .useramp         */  DEFAULT_RAMP,
 
 
     /* .checkpointT     */  NOBOINC_DEFAULT_CHECKPOINT_PERIOD,
