@@ -384,6 +384,7 @@ typedef struct MW_ALIGN_TYPE
     real timeEvolve;
     real treeRSize;
     real sunGCDist;
+    real ramp; /*ramping parameter fraction*/
 
     criterion_t criterion;
     ExternalPotentialType potentialType;
@@ -398,7 +399,6 @@ typedef struct MW_ALIGN_TYPE
 
     Potential pot;
 
-    real ramp; /*ramping parameter fraction*/
 } NBodyCtx;
 
 #define NBODYCTX_TYPE "NBodyCtx"
@@ -467,11 +467,11 @@ typedef enum
 
 
 #define EMPTY_TREE { NULL, 0.0, 0, 0, FALSE }
-#define EMPTY_NBODYCTX { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,                  \
+#define EMPTY_NBODYCTX { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,             \
                          InvalidCriterion, EXTERNAL_POTENTIAL_DEFAULT,  \
                          FALSE, FALSE, FALSE, FALSE,                    \
                          0, 0,                                          \
-                         EMPTY_POTENTIAL, 0}
+                         EMPTY_POTENTIAL}
 
 typedef enum
 {
