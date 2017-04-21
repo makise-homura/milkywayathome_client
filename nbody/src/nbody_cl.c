@@ -2666,20 +2666,21 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
 
     //BEGIN TIMING
     struct timeval start, end;
-    gettimeofday(&start, NULL);
     // sleep(1);
     writeGPUBuffers(st, &gData);
 
 
     //HANDLE RUNNING BOUNDING BOX HERE:
+    gettimeofday(&start, NULL);
     err = nbBoundingBox(st, CL_TRUE);
     if (err != CL_SUCCESS)
     {
         mwPerrorCL(err, "Error executing bounding box kernel");
         return NBODY_CL_ERROR;
     }
-    readGPUBuffers(st, &gData);
     gettimeofday(&end, NULL);
+    readGPUBuffers(st, &gData);
+    
 
     // for(int j = 0; j < st->effNBody; ++j){
     //   printf("%.3f | %.3f | %.3f || %.3f | %.3f\n", gData.pos[0][j], gData.pos[1][j], gData.pos[2][j], gData.max[0][j], gData.max[1][j]);
