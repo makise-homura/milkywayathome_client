@@ -82,6 +82,7 @@ for i in range(len(x2)):
 print "Number of bodies in x list: " + str(len(x2))
 print "Number of bodies in y list: " + str(len(y2))
 
+
 plt.subplot(222)
 plt.plot(x2,y2, 'ob', label="CPU Data");
 # plt.xlim([-100,100])

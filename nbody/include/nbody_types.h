@@ -213,6 +213,8 @@ typedef struct{
     cl_mem max[3];
     cl_mem min[3];
 
+    cl_mem mCodes;
+
 }NBodyBuffers;
 
 typedef struct
@@ -267,6 +269,7 @@ typedef struct
 typedef struct
 {
     cl_kernel boundingBox;
+    cl_kernel constructTree;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;
 //     cl_kernel summarizationClear;
@@ -324,6 +327,8 @@ typedef struct
 
     real* max[3];
     real* min[3];
+
+    uint32_t* mCodes;
 
 }gpuData;
 

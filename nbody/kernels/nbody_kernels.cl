@@ -232,6 +232,7 @@ typedef struct
 typedef __global volatile gpuTree* restrict GTPtr;
 typedef __global volatile real* restrict RVPtr;
 typedef __global volatile int* restrict IVPtr;
+typedef __global volatile uint* restrict UVPtr;
 
 
 
@@ -1138,10 +1139,7 @@ __kernel void forceCalculation(GTPtr _gTreeIn, GTPtr _gTreeOut)
 {
   _gTreeOut[0].mass = 20;
 }
-// __kernel void bruteForceCalculationManager(GTPtr _gTreeIn, GTPtr _gTreeOut)
-// {
-//  forceCalculation(GTPtr _gTreeIn, GTPtr _gTreeOut   
-// }
+
 
 //__attribute__ ((reqd_work_group_size(THREADS6, 1, 1)))
 
@@ -1401,7 +1399,7 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin){
+                        RVPtr zMin, UVPtr mCodes){
  
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
@@ -1462,4 +1460,59 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
   }
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
+}
+
+
+inline uint expandBits(uint v){
+  v = (v * 0x00010001) & 0xFF0000FF;
+  v = (v * 0x00000101) & 0x0F00F00F;
+  v = (v * 0x00000011) & 0xC30C30C3;
+  v = (v * 0x00000005) & 0x49249249;
+  return v;
+}
+
+inline uint encodeLocation(real4 pos){
+  pos.x = (min(max(pos.x * 2048.0, 0.0), 2048.0));
+  pos.y = (min(max(pos.y * 2048.0, 0.0), 2048.0));
+  pos.z = (min(max(pos.z * 2048.0, 0.0), 2048.0));
+
+  uint xx = expandBits((uint)pos.x);
+  uint yy = expandBits((uint)pos.y);
+  uint zz = expandBits((uint)pos.z);
+
+  return xx * 4 + yy * 2 + zz;
+}
+
+__kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
+                        RVPtr vx, RVPtr vy, RVPtr vz,
+                        RVPtr ax, RVPtr ay, RVPtr az,
+                        RVPtr mass, RVPtr xMax, RVPtr yMax,
+                        RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                        RVPtr zMin, UVPtr mCodes_G){
+
+  uint g = (uint) get_global_id(0);
+  uint l = (uint) get_local_id(0);
+  uint group = (uint) get_group_id(0);
+
+
+  __local real4 pos_local[WARPSIZE + 1];
+  __local uint mCodes_L[WARPSIZE + 1];
+ 
+
+  pos_local[l].x = x[g]/(xMax[0]-xMin[0]);
+  pos_local[l].y = y[g]/(yMax[0]-yMin[0]);
+  pos_local[l].z = z[g]/(zMax[0]-zMin[0]);
+
+  //CALCULATE MORTON CODE
+  mCodes_L[l] = encodeLocation(pos_local[l]);
+
+  //TODO SORT LOCAL MORTON CODES USING RADIX SORT:
+
+  barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+
+  if(l == 0){
+    for(int i = 0; i < WARPSIZE; ++i){
+      mCodes_G[group + i] = mCodes_L[i];
+    }
+  } 
 }

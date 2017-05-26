@@ -408,7 +408,8 @@ static cl_int nbSetKernelArguments(cl_kernel kern, NBodyBuffers* nbb, cl_bool ex
         err = nbSetMemArrayArgs(kern, nbb->acc, 6);
         err = clSetKernelArg(kern, 9, sizeof(cl_mem), &(nbb->mass) );
         err = nbSetMemArrayArgs(kern, nbb->max, 10);
-        err = nbSetMemArrayArgs(kern, nbb->min, 13); 
+        err = nbSetMemArrayArgs(kern, nbb->min, 13);
+        err = clSetKernelArg(kern, 16, sizeof(cl_mem), &(nbb->mCodes));
     }
     else
     {
@@ -448,6 +449,7 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
     if (!exact)
     {
         err |= nbSetKernelArguments(k->boundingBox, st->nbb, exact);
+        err |= nbSetKernelArguments(k->constructTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -488,6 +490,7 @@ cl_int nbReleaseKernels(NBodyState* st)
     NBodyKernels* kernels = st->kernels;
 
     err |= clReleaseKernel_quiet(kernels->boundingBox);
+    err |= clReleaseKernel_quiet(kernels->constructTree);
 //     err |= clReleaseKernel_quiet(kernels->buildTreeClear);
 //     err |= clReleaseKernel_quiet(kernels->buildTree);
 //     err |= clReleaseKernel_quiet(kernels->summarizationClear);
@@ -684,6 +687,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
 {
 //    kernels->testAddition = mwCreateKernel(program, "testAddition");
     kernels->boundingBox = mwCreateKernel(program, "boundingBox");
+    kernels->constructTree = mwCreateKernel(program, "constructTree");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
 //     kernels->summarizationClear = mwCreateKernel(program, "summarizationClear");
@@ -696,13 +700,13 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->advanceHalfVelocity = mwCreateKernel(program, "advanceHalfVelocity");
     kernels->advancePosition = mwCreateKernel(program, "advancePosition");
     kernels->outputData = mwCreateKernel(program, "outputData");
-//     kernels->testAddition = mwCreateKernel(program, "testAddition");
-    return(     kernels->forceCalculation
+    return(     kernels->boundingBox
+            &&  kernels->constructTree
+            &&  kernels->forceCalculation
             &&  kernels->forceCalculationExact
             &&  kernels->advanceHalfVelocity
             &&  kernels->advancePosition
-            &&  kernels->outputData
-            &&  kernels->boundingBox);
+            &&  kernels->outputData);
 }
 
 //NOTE: This function is necessary:
@@ -1588,6 +1592,42 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     return CL_SUCCESS;
 }
 
+static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
+{
+    cl_int err;
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event constructEv;
+    cl_kernel constructTree;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+
+    
+    constructTree = kernels->constructTree;
+    global[0] = st->effNBody;
+    local[0] = ws->local[0];
+    int iterations = ceil(log(st->effNBody)/log(local[0]));
+    
+    printf("BEGINNING TREE CONSTRUCTION\n");
+    cl_event ev;
+    err = clEnqueueNDRangeKernel(ci->queue, constructTree, 1,
+                                0, global, local,
+                                0, NULL, &ev);
+    if (err != CL_SUCCESS)
+    return err;
+
+    clFinish(ci->queue);
+    printf("COMPLETED TREE CONSTRUCTION\n");
+    return CL_SUCCESS;
+}
+
 //NOTE: NOT NEEDED
 // static NBodyStatus nbCheckpointCL(const NBodyCtx* ctx, NBodyState* st)
 // {
@@ -1826,13 +1866,17 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
     for(int i = 0; i < 3; ++i){
       st->nbb->pos[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
       st->nbb->vel[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
-      st->nbb->acc[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));      
-      if(!st->usesExact){
-        st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
-        st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
-      }
+      st->nbb->acc[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
     }
     st->nbb->mass = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
+    if(!st->usesExact){
+        st->nbb->mCodes = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
+        for(int i = 0; i < 3; ++i){
+            st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
+            st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
+        }
+    }
+
     // st->nbb->input = clCreateBuffer(st->ci->clctx, CL_MEM_READ_ONLY, buffSize*sizeof(gpuTree), NULL, NULL);
     // st->nbb->output = clCreateBuffer(st->ci->clctx, CL_MEM_WRITE_ONLY, buffSize*sizeof(gpuTree), NULL, NULL);
     // st->nbb->input = mwCreateZeroReadWriteBuffer(ci, buffSize*sizeof(gpuTree));
@@ -2452,6 +2496,7 @@ void initGPUDataArrays(NBodyState* st, gpuData* gData){
     }
   }
   gData->mass = calloc(n, sizeof(real));
+  gData->mCodes = calloc(n, sizeof(uint32_t));
 }
 
 void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
@@ -2588,6 +2633,13 @@ void readGPUBuffers(NBodyState* st, gpuData* gData){
                         CL_TRUE,
                         0, n*sizeof(real), gData->mass,
                         0, NULL, NULL);
+
+  err |= clEnqueueReadBuffer(st->ci->queue,
+                        st->nbb->mCodes,
+                        CL_TRUE,
+                        0, n*sizeof(uint32_t), gData->mCodes,
+                        0, NULL, NULL);
+
   if(err != CL_SUCCESS)
         printf("%i, ERROR READING FROM OPENCL BUFFERS \n", err);
 
@@ -2679,6 +2731,14 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         return NBODY_CL_ERROR;
     }
     gettimeofday(&end, NULL);
+
+    //RUN TREE CONSTRUCTION KERNEL:
+    err = nbConstructTree(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing tree construction kernel");
+        return NBODY_CL_ERROR;
+    }
+
     readGPUBuffers(st, &gData);
     
 
@@ -2704,6 +2764,23 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("%.4f ms\n", (((real)end.tv_sec + (real)end.tv_usec * (1.0/1000000)) - ((real)start.tv_sec + (real)start.tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
+
+    printf("----------------------------\n");
+    printf("TREE CONSTRUCTION:\n");
+    printf("MORTON CODES:\n");
+    printf("- - - - - - - - - - - - - - \n");
+    for(int i = 0; i < st->effNBody; ++i){
+        if(gData.mCodes[i] > 0){
+            for(int j = i; j < st->effNBody; ++j){
+                if(gData.mCodes[i] == gData.mCodes[j]){
+                    printf("%d\n", gData.mCodes[i]);                    
+                }   
+            }
+        }
+    }
+    printf("----------------------------\n");
+    fflush(NULL);
+
 }
 
 NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
