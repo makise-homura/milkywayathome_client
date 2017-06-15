@@ -23,7 +23,7 @@ project(milkyway_nbody)
 
 set(nbody_VERSION_MAJOR 1
           CACHE INTERNAL "N-body version number")
-set(nbody_VERSION_MINOR 50
+set(nbody_VERSION_MINOR 64
           CACHE INTERNAL "N-body version number")
 set(nbody_VERSION "${nbody_VERSION_MAJOR}.${nbody_VERSION_MINOR}"
           CACHE INTERNAL "N-body version number")
@@ -87,13 +87,23 @@ print_separator()
 
 if(NBODY_OPENCL)
   set(nbody_inline_src "${LIBRARY_OUTPUT_PATH}/nbody_kernels_inline.c")
-  add_custom_command(
-    OUTPUT "${nbody_inline_src}"
-    COMMAND $<TARGET_FILE:xxd> -i "nbody_kernels.cl" ${nbody_inline_src}
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/kernels"
-    DEPENDS "${PROJECT_SOURCE_DIR}/kernels/nbody_kernels.cl"
-    MAIN_DEPENDENCY "${PROJECT_SOURCE_DIR}/kernels/nbody_kernels.cl"
-    COMMENT "Inlining N-body kernel source")
+  if(CrossCompile)
+    add_custom_command(
+      OUTPUT "${nbody_inline_src}"
+      COMMAND xxd -i "nbody_kernels.cl" ${nbody_inline_src}
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/kernels"
+      DEPENDS "${PROJECT_SOURCE_DIR}/kernels/nbody_kernels.cl"
+      MAIN_DEPENDENCY "${PROJECT_SOURCE_DIR}/kernels/nbody_kernels.cl"
+      COMMENT "Inlining N-body kernel source")
+  else()
+    add_custom_command(
+      OUTPUT "${nbody_inline_src}"
+      COMMAND $<TARGET_FILE:xxd> -i "nbody_kernels.cl" ${nbody_inline_src}
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/kernels"
+      DEPENDS "${PROJECT_SOURCE_DIR}/kernels/nbody_kernels.cl"
+      MAIN_DEPENDENCY "${PROJECT_SOURCE_DIR}/kernels/nbody_kernels.cl"
+      COMMENT "Inlining N-body kernel source")
+  endif()
   add_library(nbody_kernels STATIC ${nbody_inline_src})
 endif()
 
@@ -124,6 +134,8 @@ set(nbody_lib_src ${NBODY_SRC_DIR}/nbody_chisq.c
                   ${NBODY_SRC_DIR}/nbody_plain.c
                   ${NBODY_SRC_DIR}/nbody_check_params.c
                   ${NBODY_SRC_DIR}/nbody_isotropic.c
+                  ${NBODY_SRC_DIR}/nbody_mixeddwarf.c
+                  ${NBODY_SRC_DIR}/nbody_dwarf_potential.c
                   ${NBODY_SRC_DIR}/nbody_plummer.c
                   ${NBODY_SRC_DIR}/nbody_nfw.c
                   ${NBODY_SRC_DIR}/nbody_hernq.c
@@ -150,6 +162,8 @@ set(nbody_lib_headers ${NBODY_INCLUDE_DIR}/nbody_chisq.h
                       ${NBODY_INCLUDE_DIR}/nbody_potential.h
                       ${NBODY_INCLUDE_DIR}/nbody_check_params.h
                       ${NBODY_INCLUDE_DIR}/nbody_isotropic.h
+                      ${NBODY_INCLUDE_DIR}/nbody_mixeddwarf.h
+                      ${NBODY_INCLUDE_DIR}/nbody_dwarf_potential.h
                       ${NBODY_INCLUDE_DIR}/nbody_plummer.h
                       ${NBODY_INCLUDE_DIR}/nbody_nfw.h
                       ${NBODY_INCLUDE_DIR}/nbody_hernq.h
@@ -195,6 +209,7 @@ set(nbody_lua_src ${NBODY_SRC_DIR}/nbody_lua.c
                   ${NBODY_SRC_DIR}/nbody_lua_types/nbody_lua_halo.c
                   ${NBODY_SRC_DIR}/nbody_lua_types/nbody_lua_disk.c
                   ${NBODY_SRC_DIR}/nbody_lua_types/nbody_lua_spherical.c
+                  ${NBODY_SRC_DIR}/nbody_lua_types/nbody_lua_dwarf.c
                   ${NBODY_SRC_DIR}/nbody_lua_types/nbody_lua_potential.c
                   ${NBODY_SRC_DIR}/nbody_lua_types/nbody_lua_histogram_params.c)
 
@@ -214,6 +229,7 @@ set(nbody_lua_headers ${NBODY_INCLUDE_DIR}/nbody_lua.h
                       ${NBODY_INCLUDE_DIR}/nbody_lua_halo.h
                       ${NBODY_INCLUDE_DIR}/nbody_lua_disk.h
                       ${NBODY_INCLUDE_DIR}/nbody_lua_spherical.h
+                      ${NBODY_INCLUDE_DIR}/nbody_lua_dwarf.h
                       ${NBODY_INCLUDE_DIR}/nbody_lua_potential.h
                       ${NBODY_INCLUDE_DIR}/nbody_lua_histogram_params.h)
 
@@ -225,6 +241,7 @@ if(SYSTEM_IS_X86)
   enable_sse2(nbody_lua)
 endif()
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/../boinc/boinc)
 
 #TODO: The tests dSFMT has
 
@@ -437,15 +454,17 @@ if(BOINC_RELEASE_NAMES)
   endif()
 
   get_boinc_bin_name("milkyway_nbody" "${nbody_VERSION}" "${NBODY_PLAN}")
+  set(NBODY_BIN_NAME "${BOINC_BIN_NAME}" CACHE INTERNAL PARENT_SCOPE)
   set_target_properties(milkyway_nbody
                           PROPERTIES
-                OUTPUT_NAME ${BOINC_BIN_NAME})
+                            OUTPUT_NAME ${NBODY_BIN_NAME})
 
   if(NBODY_GL)
     get_boinc_bin_name("milkyway_nbody_graphics" "${nbody_VERSION}" "")
+    set(NBODY_GL_BIN_NAME "${BOINC_BIN_NAME}" CACHE INTERNAL PARENT_SCOPE)
     set_target_properties(milkyway_nbody_graphics
                             PROPERTIES
-                              OUTPUT_NAME ${BOINC_BIN_NAME})
+                              OUTPUT_NAME ${NBODY_GL_BIN_NAME})
   endif()
 endif()
 
@@ -457,8 +476,7 @@ else()
             RUNTIME DESTINATION bin)
 endif()
 
-get_target_property(NBODY_BIN_NAME milkyway_nbody LOCATION)
-get_filename_component(NBODY_BIN_NAME ${NBODY_BIN_NAME} NAME)
+set(NBODY_BIN_NAME "$<TARGET_FILE_NAME:milkyway_nbody>")
 
 if(SYSTEM_IS_X86)
   enable_sse2(milkyway_nbody)
@@ -473,8 +491,7 @@ if(NBODY_GL)
 #              RUNTIME DESTINATION bin)
   endif()
 
-  get_target_property(NBODY_GRAPHICS_BIN_NAME milkyway_nbody_graphics LOCATION)
-  get_filename_component(NBODY_GRAPHICS_BIN_NAME ${NBODY_GRAPHICS_BIN_NAME} NAME)
+  set(NBODY_GRAPHICS_BIN_NAME "$<TARGET_FILE_NAME:milkyway_nbody_graphics>")
 
   set_target_properties(milkyway_nbody_graphics PROPERTIES
                           COMPILE_FLAGS "${FAST_MATH_FLAGS}")

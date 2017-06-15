@@ -180,6 +180,14 @@ static real probabilities_avx_hernquist(const AstronomyParameters* ap,
     const __m256d SUNR0    = _mm256_set1_pd(ap->sun_r0);
     const __m256d R0       = _mm256_set1_pd(ap->r0);
     const __m256d QV_RECIP = _mm256_set1_pd(ap->q_inv);
+    const __m256d THICKLS  = _mm256_set1_pd(-0.285714286);
+    const __m256d THICKHS  = _mm256_set1_pd(-1.428571429);
+    /*Calculate halo and disk coeffients
+      Can probably write this in a better way */    
+    const __m256d THICKCOEF   = _mm256_set1_pd(ap->thick_disk_weight);
+    const __m256d BGCOEF      = _mm256_set1_pd(ap->background_weight);
+
+
     __m256d RI, QI;
     ssp_m256 xyz0, xyz1, xyz2, tmp0, tmp1, tmp2, PROD, PBXV, BGP;
     //xyz0, 1, 2 = x, y, z
@@ -218,8 +226,10 @@ static real probabilities_avx_hernquist(const AstronomyParameters* ap,
         PROD.d = _mm256_sqrt_pd(tmp1.d); /* Calculate R from R^2 */
         tmp2.d = _mm256_add_pd(PROD.d, R0); /* Calculate R + R0 */
 
-        PBXV.d = _mm256_div_pd(DONE256, _mm256_mul_pd(PROD.d, _mm256_mul_pd(tmp2.d, _mm256_mul_pd(tmp2.d, tmp2.d)))); /* Calculate Hernquist Profile */
+        PBXV.d = _mm256_div_pd(BGCOEF, _mm256_mul_pd(PROD.d, _mm256_mul_pd(tmp2.d, _mm256_mul_pd(tmp2.d, tmp2.d)))); /* Calculate Hernquist Profile */
         BGP.d  = _mm256_add_pd(BGP.d, _mm256_mul_pd(QI, PBXV.d));  /* Add probability for this part to total BGP */
+        /* Not sure if _mm256_exp_pd even exists but we don't actually compile the AVX so this will probably need to get fixed before we can try to do that. */
+        BGP.d  = _mm256_add_pd(BGP.d, _mm256_mul_pd(_mm256_mul_pd(QI, THICKCOEF), _mm256_exp_pd(_mm256_add_pd(_mm256_mul_pd(CylR, THICKLS), _mm256_mul_pd(_mm256_abs_pd(CylZ), THICKHS)))));
     }
 
     BGP.d = _mm256_mul_pd(BGP.d, REF_XR);
