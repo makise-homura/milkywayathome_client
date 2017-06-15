@@ -230,7 +230,7 @@ typedef struct
 
 //gpuTree pointer:
 typedef __global volatile gpuTree* restrict GTPtr;
-typedef __global volatile real* restrict RVPtr;
+typedef __global real* restrict RVPtr;
 typedef __global volatile int* restrict IVPtr;
 typedef __global volatile uint* restrict UVPtr;
 
@@ -1205,190 +1205,106 @@ __kernel void forceCalculation(GTPtr _gTreeIn, GTPtr _gTreeOut)
 //     barrier(CLK_GLOBAL_MEM_FENCE);
 // //=========================================
 // }
-//ALTERNATE FORCE CALCULATION KERNEL:
-__kernel void forceCalculationExactOld(GTPtr _gTreeIn, GTPtr _gTreeOut){
-  //TODO:
-  //ITERATE OVER ALL BODIES AFTER CURRENT BODY, DURING EACH CALCULATION,
-  //UPDATE BOTH BODIES ACCELERATIONS. THIS SHOULD PROVIDE A 2X SPEEDUP.
-  int a = (int)get_global_id(0);
-  if(_gTreeIn[a].isBody == 1){
-    real accel[3];
-    for(int i = 0; i < 3; ++i){
-      accel[i] = 0.0;
-      _gTreeIn[a].acc[i] = 0.0; //Initialize accelerations to zero before we do calculations
-    }
-    for(int i = 0; i < 1; ++i){
-      if(_gTreeIn[i].isBody == 1){
-        real drVec[3];
-        real compVec[3];
-        for(int j = 0; j < 3; ++j){
-          drVec[j] = (_gTreeIn[i].pos[j] - _gTreeIn[a].pos[j]);
-        }
-        //Calculate distance between two bodies:
-        
-        real dr2 = mad(drVec[2], drVec[2], mad(drVec[1], drVec[1], drVec[0] * drVec[0])) + EPS2;
-        //real dr2 = (drVec[0] * drVec[0]) + (drVec[1] * drVec[1]) + (drVec[2] * drVec[2]) + EPS2;
-        real dr = sqrt(dr2);
-        real m2 = _gTreeIn[i].mass;
-        real ai = m2/(dr*dr2);
-
-        //NOTE: There seems to be some sort of floating point error, that appears
-        //in the 15th decimal of precision. Narrow this down to see where it is coming from.
-        accel[0] = drVec[0] + drVec[1];
-        accel[1] = drVec[0] + drVec[1];
-        accel[2] = drVec[0] + drVec[1];
-        // accel[0] += ai * drVec[0];
-        // accel[1] += ai * drVec[1];
-        // accel[2] += ai * drVec[2];
-      }
-    }
-    // _gTreeIn[a].acc[0] = clampValue(accel[0]);
-    // _gTreeIn[a].acc[1] = clampValue(accel[1]);
-    // _gTreeIn[a].acc[2] = clampValue(accel[2]);
-    
-    _gTreeIn[a].acc[0] = accel[0];
-    _gTreeIn[a].acc[1] = accel[1];
-    _gTreeIn[a].acc[2] = accel[2];
-  }
-}
 
 //SoA FORCE CALCULATION KERNEL:
+// __attribute__ ((reqd_work_group_size(THREADS6, 1, 1)))
 __kernel void forceCalculationExact(RVPtr x, RVPtr y, RVPtr z,
                                     RVPtr vx, RVPtr vy, RVPtr vz,
                                     RVPtr ax, RVPtr ay, RVPtr az,
                                     RVPtr mass){
-  int a = (int)get_global_id(0);
-  ax[a] = 0;
-  ay[a] = 0;
-  az[a] = 0;
-  for(int i = 0; i < EFFNBODY; ++i){
-    real drVec[3] = {0,0,0};
-    drVec[0] = x[i] - x[a];
-    drVec[1] = y[i] - y[a];
-    drVec[2] = z[i] - z[a];
-    real dr2 = mad(drVec[2], drVec[2], mad(drVec[1], drVec[1], mad(drVec[0], drVec[0],EPS2)));
-    real dr = sqrt(dr2);
-    real m2 = mass[i];
-    real ai = m2/(dr*dr2);
-    ax[a] += ai * drVec[0];
-    ay[a] += ai * drVec[1];
-    az[a] += ai * drVec[2];
-    if(USE_EXTERNAL_POTENTIAL)
-    {
-      real4 externAcc = externalAcceleration(x[a], y[a], z[a]);
-      ax[a] += externAcc.x;
-      ay[a] += externAcc.y;
-      az[a] += externAcc.z;
+  uint g = (uint) get_global_id(0);
+  uint l = (uint) get_local_id(0);
+  uint group = (uint) get_group_id(0);
+
+
+  __local real posX[WARPSIZE];
+  __local real posY[WARPSIZE];
+  __local real posZ[WARPSIZE];
+  __local real accTempX[WARPSIZE];
+  __local real accTempY[WARPSIZE];
+  __local real accTempZ[WARPSIZE];
+
+  __private real4 particle;
+  __private real4 accPrivate;
+  __private real4 drVec;
+
+  __private real dr2;
+  __private real dr;
+  __private real m2;
+  __private real ai;
+
+  event_t e[3];
+
+
+  accTempX[l] = 0;
+  accTempY[l] = 0;
+  accTempZ[l] = 0;
+
+  particle.x = x[g];
+  particle.y = y[g];
+  particle.z = z[g];
+
+  barrier(CLK_LOCAL_MEM_FENCE);
+  for(int i = 0; i < EFFNBODY/WARPSIZE; ++i){
+     barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+     e[0] = async_work_group_copy(posX, x+i*WARPSIZE, WARPSIZE, 0);
+     e[1] = async_work_group_copy(posY, y+i*WARPSIZE, WARPSIZE, 0);
+     e[2] = async_work_group_copy(posZ, z+i*WARPSIZE, WARPSIZE, 0);
+     wait_group_events(3, e);
+    for(int j = 0; j < WARPSIZE; ++j){
+      drVec.x = posX[j] - particle.x;
+      drVec.y = posY[j] - particle.y;
+      drVec.z = posZ[j] - particle.z;
+      dr2 = mad(drVec.z, drVec.z, mad(drVec.y, drVec.y, mad(drVec.x, drVec.x,EPS2)));
+      dr = sqrt(dr2);
+      m2 = mass[j];
+      ai = m2/(dr*dr2);
+      accTempX[l] += ai * drVec.x;
+      accTempY[l] += ai * drVec.y;
+      accTempZ[l] += ai * drVec.z;
+      if(USE_EXTERNAL_POTENTIAL)
+      {
+        real4 externAcc = externalAcceleration(particle.x, particle.y, particle.z);
+        accTempX[l] += externAcc.x;
+        accTempY[l] += externAcc.y;
+        accTempZ[l] += externAcc.z;
+      }
     }
-
   }
-
-}
-
-//__attribute__ ((reqd_work_group_size(THREADS7, 1, 1)))
-__kernel void advanceHalfVelocityOld(GTPtr _gTreeIn, GTPtr _gTreeOut)
-{
-  int a = get_global_id(0);
-  //if(_gTreeIn[a].isBody == 1){
-    real vx = _gTreeIn[a].vel[0];
-    real vy = _gTreeIn[a].vel[1];
-    real vz = _gTreeIn[a].vel[2];
-
-    real ax = _gTreeIn[a].acc[0];
-    real ay = _gTreeIn[a].acc[1];
-    real az = _gTreeIn[a].acc[2];
-
-    real dtHalf = 0.5 * TIMESTEP;
-    
-    real dvx = dtHalf * ax;
-    real dvy = dtHalf * ay;
-    real dvz = dtHalf * az;
-    
-    vx += dvx;
-    vy += dvy;
-    vz += dvz;
-
-    // _gTreeIn[a].vel[0] = clampValue(vx);
-    // _gTreeIn[a].vel[1] = clampValue(vy);
-    // _gTreeIn[a].vel[2] = clampValue(vz);
-
-    _gTreeIn[a].vel[0] = vx;
-    _gTreeIn[a].vel[1] = vy;
-    _gTreeIn[a].vel[2] = vz;
-    //}
+    barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+    e[0] = async_work_group_copy(ax + group * WARPSIZE, accTempX, WARPSIZE, 0);
+    e[1] = async_work_group_copy(ay + group * WARPSIZE, accTempY, WARPSIZE, 0);
+    e[2] = async_work_group_copy(az + group * WARPSIZE, accTempZ, WARPSIZE, 0);
+    wait_group_events(3, e);
 }
 
 __kernel void advanceHalfVelocity(RVPtr x, RVPtr y, RVPtr z,
                                     RVPtr vx, RVPtr vy, RVPtr vz,
                                     RVPtr ax, RVPtr ay, RVPtr az,
                                     RVPtr mass){
-  int a = get_global_id(0);
+  uint g = (uint) get_global_id(0);
+  uint l = (uint) get_local_id(0);
+  uint group = (uint) get_group_id(0);
+
   real dtHalf = 0.5 * TIMESTEP;
-  vx[a] = mad(dtHalf, ax[a], vx[a]);
-  vy[a] = mad(dtHalf, ay[a], vy[a]);
-  vz[a] = mad(dtHalf, az[a], vz[a]);
-}
-
-//__attribute__ ((reqd_work_group_size(THREADS7, 1, 1)))
-__kernel void advancePositionOld(GTPtr _gTreeIn, GTPtr _gTreeOut)
-{
-
-  int a = get_global_id(0);
-  if(_gTreeIn[a].isBody == 1){
-    real px = _gTreeIn[a].pos[0];
-    real py = _gTreeIn[a].pos[1];
-    real pz = _gTreeIn[a].pos[2];
-    
-    real vx = _gTreeIn[a].vel[0];
-    real vy = _gTreeIn[a].vel[1];
-    real vz = _gTreeIn[a].vel[2];
-
-    px = mad(TIMESTEP, vx, px);
-    py = mad(TIMESTEP, vy, py);
-    pz = mad(TIMESTEP, vz, pz);
-
-    // _gTreeIn[a].pos[0] = clampValue(px);
-    // _gTreeIn[a].pos[1] = clampValue(py);
-    // _gTreeIn[a].pos[2] = clampValue(pz);
-    _gTreeIn[a].pos[0] = px;
-    _gTreeIn[a].pos[1] = py;
-    _gTreeIn[a].pos[2] = pz;
-
-  }
+  vx[g] = mad(dtHalf, ax[g], vx[g]);
+  vy[g] = mad(dtHalf, ay[g], vy[g]);
+  vz[g] = mad(dtHalf, az[g], vz[g]);
 }
 
 __kernel void advancePosition(RVPtr x, RVPtr y, RVPtr z,
                               RVPtr vx, RVPtr vy, RVPtr vz,
                               RVPtr ax, RVPtr ay, RVPtr az,
                               RVPtr mass){
-  int a = get_global_id(0);
-  x[a] = mad(TIMESTEP, vx[a], x[a]);
-  y[a] = mad(TIMESTEP, vy[a], y[a]);
-  z[a] = mad(TIMESTEP, vz[a], z[a]);
+
+  uint g = (uint) get_global_id(0);
+  uint l = (uint) get_local_id(0);
+  uint group = (uint) get_group_id(0);
+
+  x[g] = mad(TIMESTEP, vx[g], x[g]);
+  y[g] = mad(TIMESTEP, vy[g], y[g]);
+  z[g] = mad(TIMESTEP, vz[g], z[g]);
 }
-
-//__attribute__ ((reqd_work_group_size(THREADS7, 1, 1)))
-__kernel void outputDataOld(GTPtr _gTreeIn, GTPtr _gTreeOut)
-{
-  int a = get_global_id(0);
-  _gTreeOut[a].bodyID = _gTreeIn[a].bodyID;
-  for(int i = 0; i < 3; ++i){
-    _gTreeOut[a].pos[i] = _gTreeIn[a].pos[i];
-    _gTreeOut[a].vel[i] = _gTreeIn[a].vel[i];
-    _gTreeOut[a].acc[i] = _gTreeIn[a].acc[i];
-  }
-  _gTreeOut[a].mass = _gTreeIn[a].mass;
-  _gTreeOut[a].isBody = _gTreeIn[a].isBody;
-}
-
-__kernel void outputData(RVPtr x, RVPtr y, RVPtr z,
-                        RVPtr vx, RVPtr vy, RVPtr vz,
-                        RVPtr ax, RVPtr ay, RVPtr az,
-                        RVPtr mass){
-  int a = get_global_id(0);
-
-}
-
 
 
 ////////////////////////////////////
@@ -1404,17 +1320,29 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
   uint group = (uint) get_group_id(0);
+
+  event_t e[6];
+
   //Create local variables and copy global data into them:
-  __local real maxTemp[3][WARPSIZE + 1];
-  __local real minTemp[3][WARPSIZE + 1];
+  __local real maxTemp[3][WARPSIZE];
+  __local real minTemp[3][WARPSIZE];
+  e[0] = async_work_group_copy(maxTemp[0], xMax + group * WARPSIZE, WARPSIZE, 0);
+  e[1] = async_work_group_copy(maxTemp[1], yMax + group * WARPSIZE, WARPSIZE, 0);
+  e[2] = async_work_group_copy(maxTemp[2], zMax + group * WARPSIZE, WARPSIZE, 0);
 
-  maxTemp[0][l] = xMax[g];
-  maxTemp[1][l] = yMax[g];
-  maxTemp[2][l] = zMax[g];
+  e[3] = async_work_group_copy(minTemp[0], xMin + group * WARPSIZE, WARPSIZE, 0);
+  e[4] = async_work_group_copy(minTemp[1], yMin + group * WARPSIZE, WARPSIZE, 0);
+  e[5] = async_work_group_copy(minTemp[2], zMin + group * WARPSIZE, WARPSIZE, 0);
 
-  minTemp[0][l] = xMin[g];
-  minTemp[1][l] = yMin[g];
-  minTemp[2][l] = zMin[g];
+  wait_group_events(6, e);
+
+  // maxTemp[0][l] = xMax[g];
+  // maxTemp[1][l] = yMax[g];
+  // maxTemp[2][l] = zMax[g];
+
+  // minTemp[0][l] = xMin[g];
+  // minTemp[1][l] = yMin[g];
+  // minTemp[2][l] = zMin[g];
 
   // xMax[g] = xMin[g] = x[g];
   // yMax[g] = yMin[g] = y[g];
@@ -1447,17 +1375,25 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
 
   }
   
-  //Copy back from local memory to global memory:
-  //TODO: perform reduction of data
-  
-  if(l == 0){
-    xMax[group] = maxTemp[0][l];
-    xMin[group] = minTemp[0][l];
-    yMax[group] = maxTemp[1][l];
-    yMin[group] = minTemp[1][l];
-    zMax[group] = maxTemp[2][l];
-    zMin[group] = minTemp[2][l];
-  }
+  //Copy back from local memory to global memory:  
+
+  e[0] = async_work_group_copy(xMax + group, maxTemp[0], 1, 0);
+  e[1] = async_work_group_copy(yMax + group, maxTemp[1], 1, 0);
+  e[2] = async_work_group_copy(zMax + group, maxTemp[2], 1, 0);
+
+  e[3] = async_work_group_copy(xMin + group, minTemp[0], 1, 0);
+  e[4] = async_work_group_copy(yMin + group, minTemp[1], 1, 0);
+  e[5] = async_work_group_copy(zMin + group, minTemp[2], 1, 0);
+  wait_group_events(6, e);
+
+  // if(l == 0){
+  //   xMax[group] = maxTemp[0][l];
+  //   xMin[group] = minTemp[0][l];
+  //   yMax[group] = maxTemp[1][l];
+  //   yMin[group] = minTemp[1][l];
+  //   zMax[group] = maxTemp[2][l];
+  //   zMin[group] = minTemp[2][l];
+  // }
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
 }
@@ -1472,15 +1408,22 @@ inline uint expandBits(uint v){
 }
 
 inline uint encodeLocation(real4 pos){
-  pos.x = (min(max(pos.x * 2048.0, 0.0), 2048.0));
-  pos.y = (min(max(pos.y * 2048.0, 0.0), 2048.0));
-  pos.z = (min(max(pos.z * 2048.0, 0.0), 2048.0));
+  pos.x = (min(max(pos.x * 1024.0, 0.0), 1023.0));
+  pos.y = (min(max(pos.y * 1024.0, 0.0), 1023.0));
+  pos.z = (min(max(pos.z * 1024.0, 0.0), 1023.0));
 
   uint xx = expandBits((uint)pos.x);
   uint yy = expandBits((uint)pos.y);
   uint zz = expandBits((uint)pos.z);
 
   return xx * 4 + yy * 2 + zz;
+}
+
+inline uint* radishSort(){
+  __local uint output[WARPSIZE];
+  for(int i = 0; i < 32; ++i){
+    //TODO: SORT HERE.
+  }
 }
 
 __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
@@ -1495,24 +1438,27 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
   uint group = (uint) get_group_id(0);
 
 
-  __local real4 pos_local[WARPSIZE + 1];
-  __local uint mCodes_L[WARPSIZE + 1];
+  __local real4 pos_local[WARPSIZE];
+  __local uint mCodes_L[WARPSIZE];
  
 
-  pos_local[l].x = x[g]/(xMax[0]-xMin[0]);
-  pos_local[l].y = y[g]/(yMax[0]-yMin[0]);
-  pos_local[l].z = z[g]/(zMax[0]-zMin[0]);
+  pos_local[l].x = (x[g] - xMin[0])/(xMax[0]-xMin[0]);
+  pos_local[l].y = (y[g] - yMin[0])/(yMax[0]-yMin[0]);
+  pos_local[l].z = (z[g] - zMin[0])/(zMax[0]-zMin[0]);
 
   //CALCULATE MORTON CODE
   mCodes_L[l] = encodeLocation(pos_local[l]);
-
-  //TODO SORT LOCAL MORTON CODES USING RADIX SORT:
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
   if(l == 0){
     for(int i = 0; i < WARPSIZE; ++i){
-      mCodes_G[group + i] = mCodes_L[i];
+      mCodes_G[group * WARPSIZE + i] = mCodes_L[i];
     }
-  } 
+  }
+
+  //TODO: SORT GLOBAL MORTON CODES USING RADIX
+  radishSort();
+
+  //Use global thread ID as a LSB identifier to seperate morton code collisions.
 }

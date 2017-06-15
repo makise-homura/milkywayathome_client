@@ -501,7 +501,7 @@ cl_int nbReleaseKernels(NBodyState* st)
      err |= clReleaseKernel_quiet(kernels->forceCalculationExact);
      err |= clReleaseKernel_quiet(kernels->advancePosition);
      err |= clReleaseKernel_quiet(kernels->advanceHalfVelocity);
-     err |= clReleaseKernel_quiet(kernels->outputData);
+     //err |= clReleaseKernel_quiet(kernels->outputData);
 
     if (err != CL_SUCCESS)
         mwPerrorCL(err, "Error releasing kernels");
@@ -699,14 +699,13 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->forceCalculationExact = mwCreateKernel(program, "forceCalculationExact");
     kernels->advanceHalfVelocity = mwCreateKernel(program, "advanceHalfVelocity");
     kernels->advancePosition = mwCreateKernel(program, "advancePosition");
-    kernels->outputData = mwCreateKernel(program, "outputData");
+    // kernels->outputData = mwCreateKernel(program, "outputData");
     return(     kernels->boundingBox
             &&  kernels->constructTree
             &&  kernels->forceCalculation
             &&  kernels->forceCalculationExact
             &&  kernels->advanceHalfVelocity
-            &&  kernels->advancePosition
-            &&  kernels->outputData);
+            &&  kernels->advancePosition);
 }
 
 //NOTE: This function is necessary:
@@ -1420,13 +1419,13 @@ static cl_int nbExecuteForceKernels(NBodyState* st, cl_bool updateState)
     {
         forceKern = kernels->forceCalculationExact;
         global[0] = st->effNBody;
-        local[0] = 4;
+        local[0] = ws->local[0];
     }
     else
     {
         forceKern = kernels->forceCalculation;
         global[0] = st->effNBody;
-        local[0] = 4;
+        local[0] = ws->local[0];
     }
     //Run kernel:
     
@@ -1475,7 +1474,7 @@ static cl_int nbAdvanceHalfVelocity(NBodyState* st, cl_bool updateState)
     
     velKern = kernels->advanceHalfVelocity;
     global[0] = st->effNBody;
-    local[0] = 4;
+    local[0] = ws->local[0];
     
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, velKern, 1,
@@ -1507,42 +1506,10 @@ static cl_int nbAdvancePosition(NBodyState* st, cl_bool updateState)
     
     posKern = kernels->advancePosition;
     global[0] = st->effNBody;
-    local[0] = 4;
+    local[0] = ws->local[0];
     
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, posKern, 1,
-                                    0, global, local,
-                                    0, NULL, &ev);
-    if (err != CL_SUCCESS)
-        return err;
-    clWaitForEvents(1, &ev);
-    clFinish(ci->queue);
-    return CL_SUCCESS;
-}
-
-static cl_int nbOutputData(NBodyState* st, cl_bool updateState)
-{
-    cl_int err;
-    size_t chunk;
-    size_t nChunk;
-    cl_int upperBound;
-    size_t global[1];
-    size_t local[1];
-    size_t offset[1];
-    cl_event integrateEv;
-    cl_kernel dataOut;
-    CLInfo* ci = st->ci;
-    NBodyKernels* kernels = st->kernels;
-    NBodyWorkSizes* ws = st->workSizes;
-    cl_int effNBody = st->effNBody;
-    
-    dataOut = kernels->outputData;
-    global[0] = st->effNBody;
-    //printf("GLOBAL WORKGROUP SIZE: %d\n", global[0]);
-    local[0] = 4;
-    
-    cl_event ev;
-    err = clEnqueueNDRangeKernel(ci->queue, dataOut, 1,
                                     0, global, local,
                                     0, NULL, &ev);
     if (err != CL_SUCCESS)
@@ -2634,11 +2601,14 @@ void readGPUBuffers(NBodyState* st, gpuData* gData){
                         0, n*sizeof(real), gData->mass,
                         0, NULL, NULL);
 
-  err |= clEnqueueReadBuffer(st->ci->queue,
-                        st->nbb->mCodes,
-                        CL_TRUE,
-                        0, n*sizeof(uint32_t), gData->mCodes,
-                        0, NULL, NULL);
+  if(!st->usesExact){
+    err |= clEnqueueReadBuffer(st->ci->queue,
+                            st->nbb->mCodes,
+                            CL_TRUE,
+                            0, n*sizeof(uint32_t), gData->mCodes,
+                            0, NULL, NULL);
+
+  }
 
   if(err != CL_SUCCESS)
         printf("%i, ERROR READING FROM OPENCL BUFFERS \n", err);
@@ -2665,6 +2635,10 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
   {
       mwPerrorCL(err, "Error executing force kernels");
       return NBODY_CL_ERROR;
+  }
+  readGPUBuffers(st, &gData);
+  for(int i = 0; i < st->effNBody/2; ++i){
+    printf("%d  |  %f\n", i, gData.acc[0][i]);
   }
   while(st->step < ctx->nStep){
     err = nbAdvanceHalfVelocity(st, CL_TRUE);
@@ -2715,7 +2689,6 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     fillGPUDataOnlyBodies(st, &gData);
     int n = st->effNBody;
 
-
     //BEGIN TIMING
     struct timeval start, end;
     // sleep(1);
@@ -2723,21 +2696,22 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
 
 
     //HANDLE RUNNING BOUNDING BOX HERE:
-    gettimeofday(&start, NULL);
+    
     err = nbBoundingBox(st, CL_TRUE);
     if (err != CL_SUCCESS)
     {
         mwPerrorCL(err, "Error executing bounding box kernel");
         return NBODY_CL_ERROR;
     }
-    gettimeofday(&end, NULL);
-
+    
+    gettimeofday(&start, NULL);
     //RUN TREE CONSTRUCTION KERNEL:
     err = nbConstructTree(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing tree construction kernel");
         return NBODY_CL_ERROR;
     }
+    gettimeofday(&end, NULL);
 
     readGPUBuffers(st, &gData);
     
@@ -2769,15 +2743,16 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("TREE CONSTRUCTION:\n");
     printf("MORTON CODES:\n");
     printf("- - - - - - - - - - - - - - \n");
-    for(int i = 0; i < st->effNBody; ++i){
-        if(gData.mCodes[i] > 0){
-            for(int j = i; j < st->effNBody; ++j){
-                if(gData.mCodes[i] == gData.mCodes[j]){
-                    printf("%d\n", gData.mCodes[i]);                    
-                }   
-            }
-        }
-    }
+    // for(int i = 0; i < st->effNBody; ++i){
+    //     // printf("%d\n", gData.mCodes[i]);
+    //     if(gData.mCodes[i] > 0){
+    //         for(int j = i + 1; j < st->effNBody; ++j){
+    //             if(gData.mCodes[i] == gData.mCodes[j]){
+    //                 printf("%d\n", gData.mCodes[i]);                    
+    //             }
+    //         }
+    //     }
+    // }
     printf("----------------------------\n");
     fflush(NULL);
 
