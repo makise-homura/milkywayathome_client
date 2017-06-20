@@ -17,13 +17,13 @@ os.system('rm CPUACCTEST.out')
 print "RUNNING CPU SYSTEM:"
 os.system("cmake -DNBODY_OPENCL=OFF -DDOUBLEPREC=ON -DNBODY_OPENMP=ON -DCMAKE_BUILD_TYPE=RELEASE")
 os.system('make -j 9')
-executeString = './bin/milkyway_nbody -f nbody/sample_workunits/for_developers.lua -o CPUBRUTE.out -z CPU.hist -x -i -e 36912 ' + str(timesteps) + ' 1 .2 12 >> CPUACCTEST.out'
+executeString = './bin/milkyway_nbody -f nbody/sample_workunits/for_developers.lua -o CPUBRUTE.out -z CPU.hist -x -i -e 36912 1 1 .2 12 1 1 >> CPUACCTEST.out'
 os.system(executeString)
 
 print "RUNNING GPU SYSTEM:"
 os.system("cmake -DNBODY_OPENCL=ON -DDOUBLEPREC=ON -DCMAKE_BUILD_TYPE=RELEASE ")
 os.system('make -j 9')
-executeString = './bin/milkyway_nbody -f nbody/sample_workunits/for_developers.lua -o GPUBRUTE.out -z GPU.hist -x -i -e 36912 ' + str(timesteps) + ' 1 .2 12 >> GPUACCTEST.out'
+executeString = './bin/milkyway_nbody -f nbody/sample_workunits/for_developers.lua -o GPUBRUTE.out -z GPU.hist -x -i -e 36912 1 1 .2 12 1 1 >> GPUACCTEST.out'
 os.system(executeString)
 
 
