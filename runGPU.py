@@ -16,5 +16,5 @@ os.system('rm GPUACCTEST.out')
 print "RUNNING GPU SYSTEM:"
 os.system("cmake -DNBODY_OPENCL=ON -DDOUBLEPREC=ON -DCMAKE_BUILD_TYPE=RELEASE ")
 os.system('make -j 9')
-executeString = './bin/milkyway_nbody -f nbody/sample_workunits/for_developers.lua -o GPUBRUTE.out -z GPU.hist -x -i -e 36912 4 1 .2 12 1 1' #>> GPUACCTEST.out'
+executeString = './bin/milkyway_nbody -f nbody/sample_workunits/for_developers.lua -o GPUBRUTE.out -z GPU.hist -b -i 4 1 .2 1 12 1' #>> GPUACCTEST.out'
 os.system(executeString)
