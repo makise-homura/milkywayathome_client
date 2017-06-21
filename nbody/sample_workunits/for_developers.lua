@@ -161,8 +161,8 @@ function makeBodies(ctx, potential)
             prng        = prng,
             position    = finalPosition,
             velocity    = finalVelocity,
-            mass        = dwarfMass,
-            scaleRadius = r0,
+            mass        = mass_l,
+            scaleRadius = rscale_l,
             ignore      = false
         }
   
