@@ -269,7 +269,7 @@ NBodyStatus nbRunSystemPlain(const NBodyCtx* ctx, NBodyState* st, const NBodyFla
     real Nstep = ctx->nStep;
     
     st->bestLikelihood = DEFAULT_WORST_CASE; //initializing it.
-
+    
     while (st->step < ctx->nStep)
     {
         #ifdef NBODY_BLENDER_OUTPUT
@@ -291,7 +291,6 @@ NBodyStatus nbRunSystemPlain(const NBodyCtx* ctx, NBodyState* st, const NBodyFla
         rc |= nbCheckpoint(ctx, st);
         if (nbStatusIsFatal(rc))
             return rc;
-
         /* We report the progress at step + 1. 0 is the original
            center of mass. */
         nbReportProgress(ctx, st);
