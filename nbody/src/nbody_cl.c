@@ -2639,7 +2639,7 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
   readGPUBuffers(st, &gData);
   for(int i = 0; i < st->effNBody/2; ++i){
     printf("%d  |  %f\n", i, gData.acc[0][i]);
-  }
+    }
   while(st->step < ctx->nStep){
     err = nbAdvanceHalfVelocity(st, CL_TRUE);
     if (err != CL_SUCCESS)

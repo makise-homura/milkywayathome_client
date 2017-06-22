@@ -29,7 +29,7 @@ for line in g:
  vx1.append(float(ln[4]));
  vy1.append(float(ln[5]));
  vz1.append(float(ln[6]));
- bID1.append(int(ln[8]));
+ bID1.append(int(ln[12]));
 
 x1s = [None]*len(bID1);
 y1s = [None]*len(bID1);
@@ -71,7 +71,7 @@ for line in f:
  vx2.append(float(ln[4]));
  vy2.append(float(ln[5]));
  vz2.append(float(ln[6]));
- bID2.append(int(ln[8]));
+ bID2.append(int(ln[12]));
 
 x2s = [None]*len(bID2);
 y2s = [None]*len(bID2);

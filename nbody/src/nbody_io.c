@@ -59,7 +59,7 @@ static void nbPrintBodyOutputHeader(FILE* f, int cartesian, int both)
 {
     if (both)
     {
-        fprintf(f, "# ignore %22s %22s %22s %22s %22s %22s %22s %22s %22s %22s %22s\n",
+        fprintf(f, "# ignore %22s %22s %22s %22s %22s %22s %22s %22s %22s %22s %22s %22s\n",
                 "x", 
                 "y",  
                 "z",  
@@ -70,7 +70,8 @@ static void nbPrintBodyOutputHeader(FILE* f, int cartesian, int both)
                 "v_y",
                 "v_z",
                 "mass", 
-                "v_los"
+                "v_los",
+                "BodyID"
             );
     }
     else
@@ -115,10 +116,10 @@ static int nbOutputBodies(FILE* f, const NBodyCtx* ctx, const NBodyState* st, co
             lbr = cartesianToLbr(Pos(p), ctx->sunGCDist);
             vLOS = calc_vLOS(Vel(p), Pos(p), ctx->sunGCDist);
             fprintf(f,
-                    " %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f\n",
+                    " %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %22.15f, %d\n",
                     X(Pos(p)), Y(Pos(p)), Z(Pos(p)),
                     L(lbr), B(lbr), R(lbr),
-                    X(Vel(p)), Y(Vel(p)), Z(Vel(p)), Mass(p), vLOS);
+                    X(Vel(p)), Y(Vel(p)), Z(Vel(p)), Mass(p), vLOS, p->bodynode.bodyID );
         }
         else
         {

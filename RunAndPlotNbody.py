@@ -30,6 +30,6 @@ os.system(executeString)
 # print "==========================FILE DIFF===============================\n"
 # os.system('diff CPUACCTEST.out GPUACCTEST.out')
 # print "==================================================================\n"
-# os.system('./bin/milkyway_nbody -h CPU.hist -s GPU.hist')
-# print "PLOTTING DATA"
-# os.system('python2 PlotNbodyResidual.py GPUBRUTE.out CPUBRUTE.out')
+os.system('./bin/milkyway_nbody -h CPU.hist -s GPU.hist')
+print "PLOTTING DATA"
+os.system('python2 PlotNbodyResidual.py GPUBRUTE.out CPUBRUTE.out')
