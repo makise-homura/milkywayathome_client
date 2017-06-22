@@ -296,6 +296,7 @@ NBodyStatus nbRunSystemPlain(const NBodyCtx* ctx, NBodyState* st, const NBodyFla
         nbReportProgress(ctx, st);
         nbUpdateDisplayedBodies(ctx, st);
     }
+    printf("%d/%d Steps Completed\n", st->step, ctx->nStep);
 
     // for(int i = 0; i < st->nbody; ++i){
     //     // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 

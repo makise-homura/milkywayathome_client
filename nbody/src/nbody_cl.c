@@ -2636,10 +2636,10 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
       mwPerrorCL(err, "Error executing force kernels");
       return NBODY_CL_ERROR;
   }
-  readGPUBuffers(st, &gData);
-  for(int i = 0; i < st->effNBody/2; ++i){
-    printf("%d  |  %f\n", i, gData.acc[0][i]);
-    }
+//   readGPUBuffers(st, &gData);
+//   for(int i = 0; i < st->effNBody/2; ++i){
+//     printf("%d  |  %f\n", i, gData.acc[0][i]);
+//     }
   while(st->step < ctx->nStep){
     err = nbAdvanceHalfVelocity(st, CL_TRUE);
     if (err != CL_SUCCESS)
@@ -2667,6 +2667,7 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
     }
     ++st->step;
   }
+  printf("%d/%d Steps Completed\n", st->step, ctx->nStep);
   readGPUBuffers(st, &gData);
   nbStripBodiesSoA(st, &gData);
   NBodyStatus rc = nbMakeTree(ctx, st);

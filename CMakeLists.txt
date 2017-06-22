@@ -253,7 +253,7 @@ add_flag_if_supported("-maccumulate-outgoing-args")
 
 
 # ICC does bad things by default
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SAFE_MATH_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexcess-precision=fast")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SAFE_MATH_FLAGS}")
 
 #Set math assumptions that we can make. We don't ever use the error

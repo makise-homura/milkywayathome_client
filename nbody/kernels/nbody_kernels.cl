@@ -1262,14 +1262,14 @@ __kernel void forceCalculationExact(RVPtr x, RVPtr y, RVPtr z,
       accTempX[l] += ai * drVec.x;
       accTempY[l] += ai * drVec.y;
       accTempZ[l] += ai * drVec.z;
-      if(USE_EXTERNAL_POTENTIAL)
-      {
-        real4 externAcc = externalAcceleration(particle.x, particle.y, particle.z);
-        accTempX[l] += externAcc.x;
-        accTempY[l] += externAcc.y;
-        accTempZ[l] += externAcc.z;
-      }
     }
+  }
+  if(USE_EXTERNAL_POTENTIAL)
+  {
+    real4 externAcc = externalAcceleration(particle.x, particle.y, particle.z);
+    accTempX[l] += externAcc.x;
+    accTempY[l] += externAcc.y;
+    accTempZ[l] += externAcc.z;
   }
     barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
     e[0] = async_work_group_copy(ax + group * WARPSIZE, accTempX, WARPSIZE, 0);
