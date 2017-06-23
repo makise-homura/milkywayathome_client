@@ -2509,6 +2509,7 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
         gData->min[2][i] = INFINITY;
       }
     }
+    // printf("%d | %f\n", i, gData->acc[0][i]);
   }
 }
 
@@ -2637,9 +2638,7 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
       return NBODY_CL_ERROR;
   }
 //   readGPUBuffers(st, &gData);
-//   for(int i = 0; i < st->effNBody/2; ++i){
-//     printf("%d  |  %f\n", i, gData.acc[0][i]);
-//     }
+
   while(st->step < ctx->nStep){
     err = nbAdvanceHalfVelocity(st, CL_TRUE);
     if (err != CL_SUCCESS)
@@ -2669,6 +2668,9 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
   }
   printf("%d/%d Steps Completed\n", st->step, ctx->nStep);
   readGPUBuffers(st, &gData);
+  for(int i = 0; i < st->effNBody/2; ++i){
+    printf("%d  |  %f\n", i, gData.mass[i]);
+  }
   nbStripBodiesSoA(st, &gData);
   NBodyStatus rc = nbMakeTree(ctx, st);
     if (nbStatusIsFatal(rc))
