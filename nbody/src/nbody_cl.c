@@ -223,14 +223,14 @@ cl_bool nbSetThreadCounts(NBodyWorkSizes* ws, const DevInfo* di, const NBodyCtx*
     ws->factors[6] = 1;
     ws->factors[7] = 1;
 
-    ws->threads[0] = 64;
-    ws->threads[1] = 64;
-    ws->threads[2] = 64;
-    ws->threads[3] = 64;
-    ws->threads[4] = 64;
-    ws->threads[5] = 64;
-    ws->threads[6] = 64;
-    ws->threads[7] = 64;
+    ws->threads[0] = 32;
+    ws->threads[1] = 32;
+    ws->threads[2] = 32;
+    ws->threads[3] = 32;
+    ws->threads[4] = 32;
+    ws->threads[5] = 32;
+    ws->threads[6] = 32;
+    ws->threads[7] = 32;
 
 
     if (di->devType == CL_DEVICE_TYPE_CPU)
@@ -1542,9 +1542,9 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = ceil(log(st->effNBody)/log(local[0]));
-    // printf("EFFNBODY: %d\n", st->effNBody);
-    // printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
-    // printf("ITERATIONS REQUIRED: %d\n", iterations);
+    printf("EFFNBODY: %d\n", st->effNBody);
+    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
+    printf("ITERATIONS REQUIRED: %d\n", iterations);
     
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
@@ -1800,24 +1800,17 @@ cl_int nbFindEffectiveNBody(const NBodyWorkSizes* workSizes, cl_bool exact, cl_i
     if (exact)
     {
         /* Exact force kernel needs this */
-        return mwNextMultiple((cl_int) workSizes->local[7], nbody);
+        return mwNextMultiple((cl_int) workSizes->local[0], nbody);
+        // return workSizes->local[0];
     }
     else
     {
         /* Maybe tree construction will need this later */
         // return mwNextMultiple((cl_int) workSizes->local[7], nbody);
-        return nbody;
+        return mwNextMultiple((cl_int) workSizes->local[0], nbody);
     }
 }
 
-cl_int nbSizeGPUTree(NBodyState* st){
-  if(st->usesExact){
-    return mwNextMultiple((cl_int) st->workSizes->local[7], (st->nbody + st->tree.cellUsed));
-  }
-  else{
-    return st->nbody;
-  }
-}
 //NOTE: Works So Far
 cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
 {
@@ -1889,7 +1882,7 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
 
     //massSize = st->usesExact ? st->effNBody * sizeof(real) : (nNode + 1) * sizeof(real);
     // nbb->mass = mwCreateZeroReadWriteBuffer(ci, massSize);
-    // if (!nbb->mass)
+    // if (!nbb->mass)false
     // {
     //     return MW_CL_ERROR;
     // }
@@ -2501,15 +2494,14 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
       gData->acc[2][i] = 0;
       gData->mass[i] = 0;
       if(!st->usesExact){
-        gData->max[0][i] = -INFINITY;
-        gData->max[1][i] = -INFINITY;
-        gData->max[2][i] = -INFINITY;
-        gData->min[0][i] = INFINITY;
-        gData->min[1][i] = INFINITY;
-        gData->min[2][i] = INFINITY;
+        gData->max[0][i] = -DBL_MAX;
+        gData->max[1][i] = -DBL_MAX;
+        gData->max[2][i] = -DBL_MAX;
+        gData->min[0][i] = DBL_MAX;
+        gData->min[1][i] = DBL_MAX;
+        gData->min[2][i] = DBL_MAX;
       }
     }
-    // printf("%d | %f\n", i, gData->acc[0][i]);
   }
 }
 
@@ -2668,9 +2660,9 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
   }
   printf("%d/%d Steps Completed\n", st->step, ctx->nStep);
   readGPUBuffers(st, &gData);
-  for(int i = 0; i < st->effNBody/2; ++i){
-    printf("%d  |  %f\n", i, gData.mass[i]);
-  }
+//   for(int i = 0; i < st->effNBody/2; ++i){
+//     printf("%d  |  %f\n", i, gData.mass[i]);
+//   }
   nbStripBodiesSoA(st, &gData);
   NBodyStatus rc = nbMakeTree(ctx, st);
     if (nbStatusIsFatal(rc))
@@ -2720,7 +2712,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     
 
     // for(int j = 0; j < st->effNBody; ++j){
-    //   printf("%.3f | %.3f | %.3f || %.3f | %.3f\n", gData.pos[0][j], gData.pos[1][j], gData.pos[2][j], gData.max[0][j], gData.max[1][j]);
+    //   printf("%.3f | %.3f | %.3f\n", gData.max[0][j], gData.max[1][j], gData.max[2][j]);
     // }
     printf("----------------------------\n");
     printf("BOUNDING BOX:\n");
@@ -2758,7 +2750,6 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     // }
     printf("----------------------------\n");
     fflush(NULL);
-
 }
 
 NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
@@ -2798,31 +2789,32 @@ NBodyStatus nbStripBodies(NBodyState* st, gpuTree* gpuData){ //Function to strip
 
 NBodyStatus nbStripBodiesSoA(NBodyState* st, gpuData* gData){ //Function to strip bodies out of GPU Tree
   printf("STRIPPING BODIES FROM BUFFER STRUCTURE\n");
-  int n = st->nbody;
+  int n = st->effNBody;
   for(int i = 0; i < n; ++i){
     // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 
-    //   i, gData->acc[0], gData->acc[1], gData->acc[2]);
+    //   i, gData->acc[0][i], gData->acc[1][i], gData->acc[2][i]);
     // printf("BODY ID: %d, VELOCITY: %.15f,%.15f,%.15f\n", 
     //   i, gData->vel[0], gData->vel[1], gData->vel[2]);
     // printf("BODY ID: %d, POSITION: %.15f,%.15f,%.15f\n", 
-    //   i, gData->pos[0], gData->pos[1], gData->pos[2]);
+    //   i, gData->pos[0][i], gData->pos[1][i], gData->pos[2][i]);
     // printf("BODY ID: %d, MASS: %.15f\n", 
     //   i, gData->mass[i]);
     // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n", 
     // gpuData[i].bodyID, gpuData[i].vel[0], gpuData[i].vel[1], gpuData[i].vel[2]);
     // printf("BODY ID: %d, POSITION: %f,%f,%f\n", 
     // gpuData[i].bodyID, gpuData[i].pos[0], gpuData[i].pos[1], gpuData[i].pos[2]);
-    st->bodytab[i].bodynode.pos.x = gData->pos[0][i];
-    st->bodytab[i].bodynode.pos.y = gData->pos[1][i];
-    st->bodytab[i].bodynode.pos.z = gData->pos[2][i];
+    if(i < st->nbody){
+        st->bodytab[i].bodynode.pos.x = gData->pos[0][i];
+        st->bodytab[i].bodynode.pos.y = gData->pos[1][i];
+        st->bodytab[i].bodynode.pos.z = gData->pos[2][i];
 
-    st->bodytab[i].bodynode.bodyID = i;
-    st->bodytab[i].vel.x = gData->vel[0][i];
-    st->bodytab[i].vel.y = gData->vel[1][i];
-    st->bodytab[i].vel.z = gData->vel[2][i];
+        st->bodytab[i].bodynode.bodyID = i;
+        st->bodytab[i].vel.x = gData->vel[0][i];
+        st->bodytab[i].vel.y = gData->vel[1][i];
+        st->bodytab[i].vel.z = gData->vel[2][i];
 
-    st->bodytab[i].bodynode.mass = gData->mass[i];
-
+        st->bodytab[i].bodynode.mass = gData->mass[i];
+    }
   }
 }
 

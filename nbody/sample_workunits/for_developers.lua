@@ -17,13 +17,13 @@
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
 -- -- -- -- -- -- -- -- -- STANDARD  SETTINGS   -- -- -- -- -- -- -- -- -- --        
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-totalBodies           = 2048   -- -- NUMBER OF BODIES           -- --
+totalBodies           = 199999   -- -- NUMBER OF BODIES           -- --
 nbodyLikelihoodMethod = "EMD"   -- -- HIST COMPARE METHOD        -- --
 nbodyMinVersion       = "1.64"  -- -- MINIMUM APP VERSION        -- --
 
 run_null_potential    = false   -- -- NULL POTENTIAL SWITCH      -- --
 two_component_model   = false    -- -- TWO COMPONENTS SWITCH      -- --
-use_tree_code         = false    -- -- USE TREE CODE NOT EXACT    -- --
+use_tree_code         = true    -- -- USE TREE CODE NOT EXACT    -- --
 print_reverse_orbit   = false   -- -- PRINT REVERSE ORBIT SWITCH -- --
 print_out_parameters  = false   -- -- PRINT OUT ALL PARAMETERS   -- --
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
@@ -49,7 +49,7 @@ use_best_likelihood  = false    -- use the best likelihood return code
 best_like_start      = 0.98    -- what percent of sim to start
 use_vel_disps        = false    -- use velocity dispersions in likelihood
         
-timestep_control     = false   -- -- control number of steps    -- --
+timestep_control     = true   -- -- control number of steps    -- --
 Ntime_steps          = 0     -- -- number of timesteps to run -- --
 
 -- -- -- -- -- -- -- -- -- DWARF STARTING LOCATION   -- -- -- -- -- -- -- --
@@ -103,6 +103,7 @@ function get_timestep()
     else 
         t = sqr(1/10.0) * sqrt((pi_4_3 * cube(rscale_l)) / (mass_l))
     end
+    t = round(t, 10)
     print(t)
     return t
 end
