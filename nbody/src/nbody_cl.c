@@ -449,7 +449,8 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
     if (!exact)
     {
         err |= nbSetKernelArguments(k->boundingBox, st->nbb, exact);
-        err |= nbSetKernelArguments(k->constructTree, st->nbb, exact);
+        err |= nbSetKernelArguments(k->encodeTree, st->nbb, exact);
+        err |= nbSetKernelArguments(k->mortonSort, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -490,7 +491,8 @@ cl_int nbReleaseKernels(NBodyState* st)
     NBodyKernels* kernels = st->kernels;
 
     err |= clReleaseKernel_quiet(kernels->boundingBox);
-    err |= clReleaseKernel_quiet(kernels->constructTree);
+    err |= clReleaseKernel_quiet(kernels->encodeTree);
+    err |= clReleaseKernel_quiet(kernels->mortonSort);
 //     err |= clReleaseKernel_quiet(kernels->buildTreeClear);
 //     err |= clReleaseKernel_quiet(kernels->buildTree);
 //     err |= clReleaseKernel_quiet(kernels->summarizationClear);
@@ -687,7 +689,8 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
 {
 //    kernels->testAddition = mwCreateKernel(program, "testAddition");
     kernels->boundingBox = mwCreateKernel(program, "boundingBox");
-    kernels->constructTree = mwCreateKernel(program, "constructTree");
+    kernels->encodeTree = mwCreateKernel(program, "encodeTree");
+    kernels->mortonSort = mwCreateKernel(program, "mortonSort");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
 //     kernels->summarizationClear = mwCreateKernel(program, "summarizationClear");
@@ -701,7 +704,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->advancePosition = mwCreateKernel(program, "advancePosition");
     // kernels->outputData = mwCreateKernel(program, "outputData");
     return(     kernels->boundingBox
-            &&  kernels->constructTree
+            &&  kernels->encodeTree
             &&  kernels->forceCalculation
             &&  kernels->forceCalculationExact
             &&  kernels->advanceHalfVelocity
@@ -1559,7 +1562,8 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     return CL_SUCCESS;
 }
 
-static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
+
+static cl_int nbMortonSort(NBodyState* st, cl_bool updateState)
 {
     cl_int err;
     size_t chunk;
@@ -1568,8 +1572,8 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     size_t global[1];
     size_t local[1];
     size_t offset[1];
-    cl_event constructEv;
-    cl_kernel constructTree;
+    cl_event mortonEv;
+    cl_kernel mortonSort;
     CLInfo* ci = st->ci;
     NBodyKernels* kernels = st->kernels;
     NBodyWorkSizes* ws = st->workSizes;
@@ -1577,14 +1581,53 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
 
     
-    constructTree = kernels->constructTree;
+    mortonSort = kernels->mortonSort;
+    global[0] = st->effNBody;
+    local[0] = ws->local[0];
+    int iterations = 1;
+    printf("EFFNBODY: %d\n", st->effNBody);
+    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
+    printf("ITERATIONS REQUIRED: %d\n", iterations);
+    
+    cl_event ev;
+    for(int i = 0; i < iterations; ++i){
+        err = clEnqueueNDRangeKernel(ci->queue, mortonSort, 1,
+                                    0, global, local,
+                                    0, NULL, &ev);
+        if (err != CL_SUCCESS)
+        return err;
+    }
+
+    clFinish(ci->queue);    
+    return CL_SUCCESS;
+}
+
+static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
+{
+    cl_int err;
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event encodeEv;
+    cl_kernel encodeTree;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+
+    
+    encodeTree = kernels->encodeTree;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = ceil(log(st->effNBody)/log(local[0]));
     
     printf("BEGINNING TREE CONSTRUCTION\n");
     cl_event ev;
-    err = clEnqueueNDRangeKernel(ci->queue, constructTree, 1,
+    err = clEnqueueNDRangeKernel(ci->queue, encodeTree, 1,
                                 0, global, local,
                                 0, NULL, &ev);
     if (err != CL_SUCCESS)
@@ -2656,6 +2699,14 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
         mwPerrorCL(err, "Error executing half velocity kernel");
         return NBODY_CL_ERROR;
     }
+
+    printf("%d<<<<<<<<<<<<<<<<\n", ctx->BestLikeStart);
+    if(st->step / ctx->nStep >= ctx->BestLikeStart && ctx->useBestLike)
+    {
+        printf("DUMPING TO CPU FOR BEST LIKLIHOOD CALCULATION\n");
+        fflush(NULL);
+        // get_likelihood(ctx, st, nbf);
+    }
     ++st->step;
   }
   printf("%d/%d Steps Completed\n", st->step, ctx->nStep);
@@ -2701,13 +2752,19 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     
     gettimeofday(&start, NULL);
     //RUN TREE CONSTRUCTION KERNEL:
-    err = nbConstructTree(st, CL_TRUE);
+    err = nbEncodeTree(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing tree construction kernel");
         return NBODY_CL_ERROR;
     }
     gettimeofday(&end, NULL);
 
+
+    err = nbMortonSort(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing morton sorting kernel");
+        return NBODY_CL_ERROR;
+    }
     readGPUBuffers(st, &gData);
     
 
@@ -2738,16 +2795,16 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("TREE CONSTRUCTION:\n");
     printf("MORTON CODES:\n");
     printf("- - - - - - - - - - - - - - \n");
-    // for(int i = 0; i < st->effNBody; ++i){
-    //     // printf("%d\n", gData.mCodes[i]);
-    //     if(gData.mCodes[i] > 0){
-    //         for(int j = i + 1; j < st->effNBody; ++j){
-    //             if(gData.mCodes[i] == gData.mCodes[j]){
-    //                 printf("%d\n", gData.mCodes[i]);                    
-    //             }
-    //         }
-    //     }
-    // }
+    for(int i = 0; i < st->effNBody; ++i){
+        printf("%d\n", gData.mCodes[i]);
+        // if(gData.mCodes[i] > 0){
+        //     for(int j = i + 1; j < st->effNBody; ++j){
+        //         if(gData.mCodes[i] == gData.mCodes[j]){
+        //             printf("%d\n", gData.mCodes[i]);                    
+        //         }
+        //     }
+        // }
+    }
     printf("----------------------------\n");
     fflush(NULL);
 }

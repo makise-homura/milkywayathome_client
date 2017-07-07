@@ -17,7 +17,7 @@
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
 -- -- -- -- -- -- -- -- -- STANDARD  SETTINGS   -- -- -- -- -- -- -- -- -- --        
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-totalBodies           = 199999   -- -- NUMBER OF BODIES           -- --
+totalBodies           = 33   -- -- NUMBER OF BODIES           -- --
 nbodyLikelihoodMethod = "EMD"   -- -- HIST COMPARE METHOD        -- --
 nbodyMinVersion       = "1.64"  -- -- MINIMUM APP VERSION        -- --
 
@@ -46,11 +46,11 @@ bta_upper_range = 15     -- upper range for beta
 
 -- -- -- -- -- -- -- -- -- AlGORITHM OPTIONS -- -- -- -- -- -- -- --
 use_best_likelihood  = false    -- use the best likelihood return code
-best_like_start      = 0.98    -- what percent of sim to start
+best_like_start      = 0.5    -- what percent of sim to start
 use_vel_disps        = false    -- use velocity dispersions in likelihood
         
 timestep_control     = true   -- -- control number of steps    -- --
-Ntime_steps          = 0     -- -- number of timesteps to run -- --
+Ntime_steps          = 10     -- -- number of timesteps to run -- --
 
 -- -- -- -- -- -- -- -- -- DWARF STARTING LOCATION   -- -- -- -- -- -- -- --
 l  = 218

@@ -270,7 +270,8 @@ typedef struct
 typedef struct
 {
     cl_kernel boundingBox;
-    cl_kernel constructTree;
+    cl_kernel encodeTree;
+    cl_kernel mortonSort;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;
 //     cl_kernel summarizationClear;

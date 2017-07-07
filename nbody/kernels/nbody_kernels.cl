@@ -232,7 +232,7 @@ typedef struct
 typedef __global volatile gpuTree* restrict GTPtr;
 typedef __global real* restrict RVPtr;
 typedef __global volatile int* restrict IVPtr;
-typedef __global volatile uint* restrict UVPtr;
+typedef __global uint* restrict UVPtr;
 
 
 
@@ -1425,14 +1425,34 @@ inline uint encodeLocation(real4 pos){
   return xx * 4 + yy * 2 + zz;
 }
 
-inline uint* radishSort(){
-  __local uint output[WARPSIZE];
-  for(int i = 0; i < 32; ++i){
-    //TODO: SORT HERE.
-  }
+
+__kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
+                        RVPtr vx, RVPtr vy, RVPtr vz,
+                        RVPtr ax, RVPtr ay, RVPtr az,
+                        RVPtr mass, RVPtr xMax, RVPtr yMax,
+                        RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                        RVPtr zMin, UVPtr mCodes_G){
+  
+  
+  uint g = (uint) get_global_id(0);
+  uint l = (uint) get_local_id(0);
+  uint group = (uint) get_group_id(0);
+   event_t e[6];
+
+  //Create local variables and copy global data into them:
+  __local uint mCodes_L[WARPSIZE];
+  __local uint mCodes_Sorted[WARPSIZE];
+  e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
+  wait_group_events(1, e);
+  int itr = (int)log2((real)WARPSIZE);
+  e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
+  wait_group_events(1, e);
+
 }
 
-__kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
+inline uint* swizzleArray(uint* array1, uint* array2){
+}
+__kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr vx, RVPtr vy, RVPtr vz,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
@@ -1463,8 +1483,6 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     }
   }
 
-  //TODO: SORT GLOBAL MORTON CODES USING RADIX
-  radishSort();
 
   //Use global thread ID as a LSB identifier to seperate morton code collisions.
 }
