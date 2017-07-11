@@ -119,22 +119,22 @@ legend = plt.legend(loc="upper right")
 #Histograms:
 input = sys.argv[3]
 f = open(input, 'r');
+"""
 for line in f:
     if(line.startswith('b')):
         break
     f.next()
-
+"""
 l1 = []
 b1 = []
 value1 = []
 
 for line in f:
     ln = line.split(' ')
-    print line
-    l1.append(float(ln[1]))
-    b1.append(float(ln[2]))
-    value1.append(float(ln[3]))
-    f.next()
+    if ln[0] == "1":
+        l1.append(float(ln[1]))
+        b1.append(float(ln[2]))
+        value1.append(float(ln[3]))
 
 barwidth = l1[1] - l1[0]
 plt.subplot(425)
@@ -145,10 +145,12 @@ f.close()
 
 input = sys.argv[4]
 f = open(input, 'r');
+"""
 for line in f:
     if(line.startswith('b')):
         break
     f.next()
+"""
 
 l2 = []
 b2 = []
@@ -156,10 +158,10 @@ value2 = []
 
 for line in f:
     ln = line.split(' ')
-    l2.append(float(ln[1]))
-    b2.append(float(ln[2]))
-    value2.append(float(ln[3]))
-    f.next()
+    if ln[0] == "1":
+        l2.append(float(ln[1]))
+        b2.append(float(ln[2]))
+        value2.append(float(ln[3]))
 
 barwidth = l2[1] - l2[0]
 plt.subplot(426)
