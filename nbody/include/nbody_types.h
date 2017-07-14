@@ -270,7 +270,8 @@ typedef struct
 typedef struct
 {
     cl_kernel boundingBox;
-    cl_kernel constructTree;
+    cl_kernel encodeTree;
+    cl_kernel mortonSort;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;
 //     cl_kernel summarizationClear;
@@ -437,7 +438,6 @@ typedef struct MW_ALIGN_TYPE
     unsigned int step;
     int nbody;
     int effNBody;            /* Sometimes needed rounded up number of bodies. >= nbody are just padding */
-    int gpuTreeSize;        //Like effNBody this is the size of the GPU buffer
     int treeIncest;          /* Tree incest has occured */
     int potentialEvalError;  /* Error occured in calling custom Lua potential */
 

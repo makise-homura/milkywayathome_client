@@ -232,7 +232,7 @@ typedef struct
 typedef __global volatile gpuTree* restrict GTPtr;
 typedef __global real* restrict RVPtr;
 typedef __global volatile int* restrict IVPtr;
-typedef __global volatile uint* restrict UVPtr;
+typedef __global uint* restrict UVPtr;
 
 
 
@@ -1245,6 +1245,9 @@ __kernel void forceCalculationExact(RVPtr x, RVPtr y, RVPtr z,
   particle.z = z[g];
 
   barrier(CLK_LOCAL_MEM_FENCE);
+
+  int comp1;
+  int comp2; 
   for(int i = 0; i < EFFNBODY/WARPSIZE; ++i){
      barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
      e[0] = async_work_group_copy(posX, x+i*WARPSIZE, WARPSIZE, 0);
@@ -1252,13 +1255,15 @@ __kernel void forceCalculationExact(RVPtr x, RVPtr y, RVPtr z,
      e[2] = async_work_group_copy(posZ, z+i*WARPSIZE, WARPSIZE, 0);
      wait_group_events(3, e);
     for(int j = 0; j < WARPSIZE; ++j){
+      comp1 = i * WARPSIZE + j < NBODY;
+      comp2 = g < NBODY;
       drVec.x = posX[j] - particle.x;
       drVec.y = posY[j] - particle.y;
       drVec.z = posZ[j] - particle.z;
       dr2 = mad(drVec.z, drVec.z, mad(drVec.y, drVec.y, mad(drVec.x, drVec.x,EPS2)));
       dr = sqrt(dr2);
       m2 = mass[j];
-      ai = m2/(dr*dr2);
+      ai = m2/(dr*dr2) * comp1 * comp2;
       accTempX[l] += ai * drVec.x;
       accTempY[l] += ai * drVec.y;
       accTempZ[l] += ai * drVec.z;
@@ -1272,6 +1277,7 @@ __kernel void forceCalculationExact(RVPtr x, RVPtr y, RVPtr z,
     accTempZ[l] += externAcc.z;
   }
     barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+    // accTempX[l] = mass[l];
     e[0] = async_work_group_copy(ax + group * WARPSIZE, accTempX, WARPSIZE, 0);
     e[1] = async_work_group_copy(ay + group * WARPSIZE, accTempY, WARPSIZE, 0);
     e[2] = async_work_group_copy(az + group * WARPSIZE, accTempZ, WARPSIZE, 0);
@@ -1356,8 +1362,8 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
     int expVal = (int)exp2((real)i);
     int nextVal = min((int)l + expVal, (int)WARPSIZE - 1);
     if(l % (expVal) * 2 == 0){
-      int gt = maxTemp[0][l] > maxTemp[0][nextVal];
-      int lt = minTemp[0][l] < minTemp[0][nextVal];
+      int gt = (maxTemp[0][l] > maxTemp[0][nextVal]);
+      int lt = (minTemp[0][l] < minTemp[0][nextVal]);
       maxTemp[0][l] = maxTemp[0][l] * gt + maxTemp[0][nextVal] * (gt^1);
       minTemp[0][l] = minTemp[0][l] * lt + minTemp[0][nextVal] * (lt^1);
 
@@ -1375,8 +1381,8 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
 
   }
   
-  //Copy back from local memory to global memory:  
-
+  //Copy back from local memory to global memory: 
+  
   e[0] = async_work_group_copy(xMax + group, maxTemp[0], 1, 0);
   e[1] = async_work_group_copy(yMax + group, maxTemp[1], 1, 0);
   e[2] = async_work_group_copy(zMax + group, maxTemp[2], 1, 0);
@@ -1419,14 +1425,34 @@ inline uint encodeLocation(real4 pos){
   return xx * 4 + yy * 2 + zz;
 }
 
-inline uint* radishSort(){
-  __local uint output[WARPSIZE];
-  for(int i = 0; i < 32; ++i){
-    //TODO: SORT HERE.
-  }
+
+__kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
+                        RVPtr vx, RVPtr vy, RVPtr vz,
+                        RVPtr ax, RVPtr ay, RVPtr az,
+                        RVPtr mass, RVPtr xMax, RVPtr yMax,
+                        RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                        RVPtr zMin, UVPtr mCodes_G){
+  
+  
+  uint g = (uint) get_global_id(0);
+  uint l = (uint) get_local_id(0);
+  uint group = (uint) get_group_id(0);
+   event_t e[6];
+
+  //Create local variables and copy global data into them:
+  __local uint mCodes_L[WARPSIZE];
+  __local uint mCodes_Sorted[WARPSIZE];
+  e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
+  wait_group_events(1, e);
+  int itr = (int)log2((real)WARPSIZE);
+  e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
+  wait_group_events(1, e);
+
 }
 
-__kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
+inline uint* swizzleArray(uint* array1, uint* array2){
+}
+__kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr vx, RVPtr vy, RVPtr vz,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
@@ -1457,8 +1483,6 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     }
   }
 
-  //TODO: SORT GLOBAL MORTON CODES USING RADIX
-  radishSort();
 
   //Use global thread ID as a LSB identifier to seperate morton code collisions.
 }
