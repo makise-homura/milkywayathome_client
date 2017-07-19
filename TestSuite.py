@@ -16,6 +16,7 @@ os.system('rm CPUBRUTE.out')
 os.system('rm GPUACCTEST.out')
 os.system('rm CPUACCTEST.out')
 
+
 #gets the arguments
 #'g' for just gpu, 'c' for just cpu, 'h' for historgram printing, and nothing for the full test
 choice = sys.argv
