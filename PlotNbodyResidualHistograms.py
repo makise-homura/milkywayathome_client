@@ -7,6 +7,53 @@ import pylab as lab
 import subprocess
 import math as ma
 
+def convert_to_Lambda_Beta(x1, x2, x3, cartesian):
+    phi   = mt.radians(128.79)
+    theta = mt.radians(54.39)
+    psi   = mt.radians(90.70)
+
+    if(cartesian):
+        x_coor = x1
+        y_coor = x2
+        z_coor = x3
+        x_coor += 8.0 #convert to solar centric
+    else:
+        l = mt.radians(x1)
+        b = mt.radians(x2)
+        r = x3
+
+        x_coor = r * mt.cos(l) * mt.cos(b) #this is solar centered x
+        y_coor = r * mt.sin(l) * mt.cos(b)
+        z_coor = r * mt.sin(b)
+
+    #A = MB
+    B = [x_coor, y_coor, z_coor]
+    M_row1 = [mt.cos(psi) * mt.cos(phi) - mt.cos(theta) * mt.sin(phi) * mt.sin(psi),
+               mt.cos(psi) * mt.sin(phi) + mt.cos(theta) * mt.cos(phi) * mt.sin(psi),
+               mt.sin(psi) * mt.sin(theta)]
+
+    M_row2 = [-mt.sin(psi) * mt.cos(phi) - mt.cos(theta) * mt.sin(phi) * mt.cos(psi),
+               -mt.sin(psi) * mt.sin(phi) + mt.cos(theta) * mt.cos(phi) * mt.cos(psi),
+               mt.cos(psi) * mt.sin(theta)]
+
+    M_row3 = [mt.sin(theta) * mt.sin(phi),
+               -mt.sin(theta) * mt.cos(phi),
+               mt.cos(theta)]
+
+    A1 = M_row1[0] * B[0] + M_row1[1] * B[1] + M_row1[2] * B[2]
+    A2 = M_row2[0] * B[0] + M_row2[1] * B[1] + M_row2[2] * B[2]
+    A3 = M_row3[0] * B[0] + M_row3[1] * B[1] + M_row3[2] * B[2]
+
+    beta = mt.asin(-A3 / mt.sqrt(A1 * A1 + A2 * A2 + A3 * A3))
+    lamb = mt.atan2(A2, A1)
+
+    beta = mt.degrees(beta)
+    lamb = mt.degrees(lamb)
+
+    return lamb, beta
+
+
+
 input = sys.argv[1];
 g = open(input, 'r');
 x1 = [];
@@ -41,8 +88,8 @@ for i in range(len(x1)):
 
 
 plt.subplot(421)
-plt.plot(x1s,y1s, 'ob', label="GPU Data")
-# plt.xlim([-100,100])
+plt.plot(x1s,y1s, 'ob', ms=1, label="GPU Data")
+# plt.xlim([-60,40])
 # plt.ylim([-100,100])
 legend = plt.legend(loc="upper right")
 
@@ -84,7 +131,7 @@ print "Number of bodies in y list: " + str(len(y2))
 
 
 plt.subplot(422)
-plt.plot(x2,y2, 'ob', label="CPU Data");
+plt.plot(x2,y2, 'ob', ms=1, label="CPU Data");
 # plt.xlim([-100,100])
 # plt.ylim([-100,100])
 legend = plt.legend(loc="upper right")
@@ -119,19 +166,16 @@ legend = plt.legend(loc="upper right")
 #Histograms:
 input = sys.argv[3]
 f = open(input, 'r');
-"""
-for line in f:
-    if(line.startswith('b')):
-        break
-    f.next()
-"""
+
+
 l1 = []
 b1 = []
 value1 = []
 
 for line in f:
     ln = line.split(' ')
-    if ln[0] == "1":
+    # print line
+    if(ln[0] == '1'):
         l1.append(float(ln[1]))
         b1.append(float(ln[2]))
         value1.append(float(ln[3]))
@@ -145,12 +189,7 @@ f.close()
 
 input = sys.argv[4]
 f = open(input, 'r');
-"""
-for line in f:
-    if(line.startswith('b')):
-        break
-    f.next()
-"""
+
 
 l2 = []
 b2 = []
@@ -158,7 +197,7 @@ value2 = []
 
 for line in f:
     ln = line.split(' ')
-    if ln[0] == "1":
+    if(ln[0] == '1'):
         l2.append(float(ln[1]))
         b2.append(float(ln[2]))
         value2.append(float(ln[3]))
