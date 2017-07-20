@@ -450,7 +450,7 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
     {
         err |= nbSetKernelArguments(k->boundingBox, st->nbb, exact);
         err |= nbSetKernelArguments(k->encodeTree, st->nbb, exact);
-        err |= nbSetKernelArguments(k->mortonSort, st->nbb, exact);
+        err |= nbSetKernelArguments(k->localMortonSort, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -492,7 +492,7 @@ cl_int nbReleaseKernels(NBodyState* st)
 
     err |= clReleaseKernel_quiet(kernels->boundingBox);
     err |= clReleaseKernel_quiet(kernels->encodeTree);
-    err |= clReleaseKernel_quiet(kernels->mortonSort);
+    err |= clReleaseKernel_quiet(kernels->localMortonSort);
 //     err |= clReleaseKernel_quiet(kernels->buildTreeClear);
 //     err |= clReleaseKernel_quiet(kernels->buildTree);
 //     err |= clReleaseKernel_quiet(kernels->summarizationClear);
@@ -690,7 +690,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
 //    kernels->testAddition = mwCreateKernel(program, "testAddition");
     kernels->boundingBox = mwCreateKernel(program, "boundingBox");
     kernels->encodeTree = mwCreateKernel(program, "encodeTree");
-    kernels->mortonSort = mwCreateKernel(program, "mortonSort");
+    kernels->localMortonSort = mwCreateKernel(program, "localMortonSort");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
 //     kernels->summarizationClear = mwCreateKernel(program, "summarizationClear");
@@ -1563,7 +1563,7 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
 }
 
 
-static cl_int nbMortonSort(NBodyState* st, cl_bool updateState)
+static cl_int nbLocalMortonSort(NBodyState* st, cl_bool updateState)
 {
     cl_int err;
     size_t chunk;
@@ -1573,7 +1573,7 @@ static cl_int nbMortonSort(NBodyState* st, cl_bool updateState)
     size_t local[1];
     size_t offset[1];
     cl_event mortonEv;
-    cl_kernel mortonSort;
+    cl_kernel localMortonSort;
     CLInfo* ci = st->ci;
     NBodyKernels* kernels = st->kernels;
     NBodyWorkSizes* ws = st->workSizes;
@@ -1581,7 +1581,7 @@ static cl_int nbMortonSort(NBodyState* st, cl_bool updateState)
 
 
     
-    mortonSort = kernels->mortonSort;
+    localMortonSort = kernels->localMortonSort;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = 1;
@@ -1591,7 +1591,7 @@ static cl_int nbMortonSort(NBodyState* st, cl_bool updateState)
     
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
-        err = clEnqueueNDRangeKernel(ci->queue, mortonSort, 1,
+        err = clEnqueueNDRangeKernel(ci->queue, localMortonSort, 1,
                                     0, global, local,
                                     0, NULL, &ev);
         if (err != CL_SUCCESS)
@@ -2760,7 +2760,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     gettimeofday(&end, NULL);
 
 
-    err = nbMortonSort(st, CL_TRUE);
+    err = nbLocalMortonSort(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing morton sorting kernel");
         return NBODY_CL_ERROR;

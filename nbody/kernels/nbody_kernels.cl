@@ -1437,14 +1437,46 @@ __kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
   uint group = (uint) get_group_id(0);
-   event_t e[6];
+  event_t e[6];
 
   //Create local variables and copy global data into them:
   __local uint mCodes_L[WARPSIZE];
   __local uint mCodes_Sorted[WARPSIZE];
   e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
   wait_group_events(1, e);
-  int itr = (int)log2((real)WARPSIZE);
+
+  if(l % 2 == 0){
+    if(mCodes_L[l] > mCodes_L[l + 1]){
+      uint temp = mCodes_L[l];
+      mCodes_L[l] = mCodes_L[l + 1];
+      mCodes_L[l + 1] = temp;
+    }
+  }
+
+  if(l % 4 == 0){
+    if(mCodes_L[l] > mCodes_L[l + 3]){
+      uint temp = mCodes_L[l];
+      mCodes_L[l] = mCodes_L[l + 3];
+      mCodes_L[l + 3] = temp;
+    }
+  }
+
+  if(l % 4 == 0){
+    if(mCodes_L[l + 1] > mCodes_L[l + 2]){
+      uint temp = mCodes_L[l + 1];
+      mCodes_L[l + 1] = mCodes_L[l + 2];
+      mCodes_L[l + 2] = temp;
+    }
+  }
+
+  if(l % 2 == 0){
+    if(mCodes_L[l] > mCodes_L[l + 1]){
+      uint temp = mCodes_L[l];
+      mCodes_L[l] = mCodes_L[l + 1];
+      mCodes_L[l + 1] = temp;
+    }
+  }
+
   e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
   wait_group_events(1, e);
 
