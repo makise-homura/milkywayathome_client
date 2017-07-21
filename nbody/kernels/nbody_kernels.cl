@@ -1444,38 +1444,67 @@ __kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
   __local uint mCodes_Sorted[WARPSIZE];
   e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
   wait_group_events(1, e);
-
-  if(l % 2 == 0){
-    if(mCodes_L[l] > mCodes_L[l + 1]){
-      uint temp = mCodes_L[l];
-      mCodes_L[l] = mCodes_L[l + 1];
-      mCodes_L[l + 1] = temp;
+  int iter = (int)log2((real)WARPSIZE);
+  // int iter = 5;
+  for(int i = 1; i <= iter; ++i){
+    for(int j = i; j > 0; --j){
+      int groupSize = 1 << j;
+      if(l % groupSize == 0){
+        // mCodes_L[l] = groupSize/2;
+        for(int k = 0; k < groupSize/2; ++k){
+        //Bitonic shuffle:
+            uint temp = mCodes_L[l + k];
+            if(mCodes_L[l + k] > mCodes_L[l + groupSize - k - 1]){
+              mCodes_L[l + k] = mCodes_L[l + groupSize - k - 1];
+              mCodes_L[l + groupSize - k - 1] = temp;
+            }
+        }
+      }
+      barrier(CLK_LOCAL_MEM_FENCE);
+      if(l % groupSize == 0){
+        for(int k = 0; k < groupSize/2; ++k){
+          uint temp = mCodes_L[l + k];
+          if(mCodes_L[l + k] > mCodes_L[l + k + groupSize/2]){
+            mCodes_L[l + k] = mCodes_L[l + k + groupSize/2];
+            mCodes_L[l + k + groupSize/2] = temp;
+          }
+        }
+      }
+      barrier(CLK_LOCAL_MEM_FENCE);
     }
   }
 
-  if(l % 4 == 0){
-    if(mCodes_L[l] > mCodes_L[l + 3]){
-      uint temp = mCodes_L[l];
-      mCodes_L[l] = mCodes_L[l + 3];
-      mCodes_L[l + 3] = temp;
-    }
-  }
+  // if(l % 2 == 0){
+  //   if(mCodes_L[l] > mCodes_L[l + 1]){
+  //     uint temp = mCodes_L[l];
+  //     mCodes_L[l] = mCodes_L[l + 1];
+  //     mCodes_L[l + 1] = temp;
+  //   }
+  // }
 
-  if(l % 4 == 0){
-    if(mCodes_L[l + 1] > mCodes_L[l + 2]){
-      uint temp = mCodes_L[l + 1];
-      mCodes_L[l + 1] = mCodes_L[l + 2];
-      mCodes_L[l + 2] = temp;
-    }
-  }
+  // if(l % 4 == 0){
+  //   if(mCodes_L[l] > mCodes_L[l + 3]){
+  //     uint temp = mCodes_L[l];
+  //     mCodes_L[l] = mCodes_L[l + 3];
+  //     mCodes_L[l + 3] = temp;
+  //   }
+  // }
 
-  if(l % 2 == 0){
-    if(mCodes_L[l] > mCodes_L[l + 1]){
-      uint temp = mCodes_L[l];
-      mCodes_L[l] = mCodes_L[l + 1];
-      mCodes_L[l + 1] = temp;
-    }
-  }
+  // if(l % 4 == 0){
+  //   if(mCodes_L[l + 1] > mCodes_L[l + 2]){
+  //     uint temp = mCodes_L[l + 1];
+  //     mCodes_L[l + 1] = mCodes_L[l + 2];
+  //     mCodes_L[l + 2] = temp;
+  //   }
+  // }
+
+  // if(l % 2 == 0){
+  //   if(mCodes_L[l] > mCodes_L[l + 1]){
+  //     uint temp = mCodes_L[l];
+  //     mCodes_L[l] = mCodes_L[l + 1];
+  //     mCodes_L[l + 1] = temp;
+  //   }
+  // }
 
   e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
   wait_group_events(1, e);
@@ -1506,6 +1535,7 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
 
   //CALCULATE MORTON CODE
   mCodes_L[l] = encodeLocation(pos_local[l]);
+  // mCodes_L[l] = l % (WARPSIZE - l);
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 

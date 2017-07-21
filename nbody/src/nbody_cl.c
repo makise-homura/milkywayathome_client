@@ -2700,7 +2700,7 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
         return NBODY_CL_ERROR;
     }
 
-    printf("%d<<<<<<<<<<<<<<<<\n", ctx->BestLikeStart);
+    // printf("%d<<<<<<<<<<<<<<<<\n", ctx->BestLikeStart);
     if(st->step / ctx->nStep >= ctx->BestLikeStart && ctx->useBestLike)
     {
         printf("DUMPING TO CPU FOR BEST LIKLIHOOD CALCULATION\n");
