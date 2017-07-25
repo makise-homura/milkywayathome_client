@@ -451,6 +451,7 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
         err |= nbSetKernelArguments(k->boundingBox, st->nbb, exact);
         err |= nbSetKernelArguments(k->encodeTree, st->nbb, exact);
         err |= nbSetKernelArguments(k->localMortonSort, st->nbb, exact);
+        err |= nbSetKernelArguments(k->globalMortonSort, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -493,6 +494,7 @@ cl_int nbReleaseKernels(NBodyState* st)
     err |= clReleaseKernel_quiet(kernels->boundingBox);
     err |= clReleaseKernel_quiet(kernels->encodeTree);
     err |= clReleaseKernel_quiet(kernels->localMortonSort);
+    err |= clReleaseKernel_quiet(kernels->globalMortonSort);
 //     err |= clReleaseKernel_quiet(kernels->buildTreeClear);
 //     err |= clReleaseKernel_quiet(kernels->buildTree);
 //     err |= clReleaseKernel_quiet(kernels->summarizationClear);
@@ -691,6 +693,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->boundingBox = mwCreateKernel(program, "boundingBox");
     kernels->encodeTree = mwCreateKernel(program, "encodeTree");
     kernels->localMortonSort = mwCreateKernel(program, "localMortonSort");
+    kernels->globalMortonSort = mwCreateKernel(program, "globalMortonSort");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
 //     kernels->summarizationClear = mwCreateKernel(program, "summarizationClear");
@@ -1621,7 +1624,7 @@ static cl_int nbGlobalMortonSort(NBodyState* st, cl_bool updateState)
 
 
     
-    localMortonSort = kernels->globalMortonSort;
+    globalMortonSort = kernels->globalMortonSort;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = 1;
@@ -2803,13 +2806,13 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     gettimeofday(&start[2], NULL);
     err = nbLocalMortonSort(st, CL_TRUE);
     if(err != CL_SUCCESS){
-        mwPerrorCL(err, "Error executing morton sorting kernel");
+        mwPerrorCL(err, "Error executing local morton sorting kernel");
         return NBODY_CL_ERROR;
     }
 
     err = nbGlobalMortonSort(st, CL_TRUE);
     if(err != CL_SUCCESS){
-        mwPerrorCL(err, "Error executing morton sorting kernel");
+        mwPerrorCL(err, "Error executing global morton sorting kernel");
         return NBODY_CL_ERROR;
     }
 
