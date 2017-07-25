@@ -1438,7 +1438,7 @@ __kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
   uint group = (uint) get_group_id(0);
-  event_t e[6];
+  event_t e[1];
 
   //Create local variables and copy global data into them:
   __local uint mCodes_L[WARPSIZE];
@@ -1492,14 +1492,25 @@ __kernel void globalMortonSort(RVPtr x, RVPtr y, RVPtr z,
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
   uint group = (uint) get_group_id(0);
-  event_t e[6];
+
+  event_t e[1];
+
   
-  __local uint mCodes_Sorted[WARPSIZE];
+  __local uint mCodes_L[WARPSIZE];
+
+
+  mCodes_G[0] = 0;
+  barrier(CLK_GLOBAL_MEM_FENCE);
+  // e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
+  // wait_group_events(1, e);
+
+  // mCodes_L[0] = get_local_size(0);
+  
+  // e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
+  // wait_group_events(1, e);
 
 }
 
-inline uint* swizzleArray(uint* array1, uint* array2){
-}
 __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr vx, RVPtr vy, RVPtr vz,
                         RVPtr ax, RVPtr ay, RVPtr az,

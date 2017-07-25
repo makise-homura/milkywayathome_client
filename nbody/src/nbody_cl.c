@@ -1588,9 +1588,9 @@ static cl_int nbLocalMortonSort(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = 1;
-    printf("EFFNBODY: %d\n", st->effNBody);
-    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
-    printf("ITERATIONS REQUIRED: %d\n", iterations);
+    // printf("EFFNBODY: %d\n", st->effNBody);
+    // printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
+    // printf("ITERATIONS REQUIRED: %d\n", iterations);
     
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
@@ -1628,10 +1628,10 @@ static cl_int nbGlobalMortonSort(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = 1;
+    // int iterations = ceil(log((st->effNBody/local[0]))/log(2));
     printf("EFFNBODY: %d\n", st->effNBody);
     printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
     printf("ITERATIONS REQUIRED: %d\n", iterations);
-    
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
         err = clEnqueueNDRangeKernel(ci->queue, globalMortonSort, 1,
@@ -2832,20 +2832,20 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("----------------------------\n");
     fflush(NULL);
 
-    // printf("----------------------------\n");
-    // printf("TREE CONSTRUCTION:\n");
-    // printf("MORTON CODES:\n");
-    // printf("- - - - - - - - - - - - - - \n");
-    // for(int i = 0; i < st->effNBody; ++i){
-    //     printf("%d\n", gData.mCodes[i]);
-    //     // if(gData.mCodes[i] > 0){
-    //     //     for(int j = i + 1; j < st->effNBody; ++j){
-    //     //         if(gData.mCodes[i] == gData.mCodes[j]){
-    //     //             printf("%d\n", gData.mCodes[i]);                    
-    //     //         }
-    //     //     }
-    //     // }
-    // }
+    printf("----------------------------\n");
+    printf("TREE CONSTRUCTION:\n");
+    printf("MORTON CODES:\n");
+    printf("- - - - - - - - - - - - - - \n");
+    for(int i = 0; i < st->effNBody; ++i){
+        printf("%d\n", gData.mCodes[i]);
+        // if(gData.mCodes[i] > 0){
+        //     for(int j = i + 1; j < st->effNBody; ++j){
+        //         if(gData.mCodes[i] == gData.mCodes[j]){
+        //             printf("%d\n", gData.mCodes[i]);                    
+        //         }
+        //     }
+        // }
+    }
     printf("----------------------------\n");
     fflush(NULL);
 
