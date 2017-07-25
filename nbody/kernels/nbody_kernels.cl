@@ -1426,6 +1426,7 @@ inline uint encodeLocation(real4 pos){
 }
 
 
+//This kernel uses a bitonic sorting algorithm to sort each warp's morton codes:
 __kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr vx, RVPtr vy, RVPtr vz,
                         RVPtr ax, RVPtr ay, RVPtr az,
@@ -1474,40 +1475,26 @@ __kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
     }
   }
 
-  // if(l % 2 == 0){
-  //   if(mCodes_L[l] > mCodes_L[l + 1]){
-  //     uint temp = mCodes_L[l];
-  //     mCodes_L[l] = mCodes_L[l + 1];
-  //     mCodes_L[l + 1] = temp;
-  //   }
-  // }
-
-  // if(l % 4 == 0){
-  //   if(mCodes_L[l] > mCodes_L[l + 3]){
-  //     uint temp = mCodes_L[l];
-  //     mCodes_L[l] = mCodes_L[l + 3];
-  //     mCodes_L[l + 3] = temp;
-  //   }
-  // }
-
-  // if(l % 4 == 0){
-  //   if(mCodes_L[l + 1] > mCodes_L[l + 2]){
-  //     uint temp = mCodes_L[l + 1];
-  //     mCodes_L[l + 1] = mCodes_L[l + 2];
-  //     mCodes_L[l + 2] = temp;
-  //   }
-  // }
-
-  // if(l % 2 == 0){
-  //   if(mCodes_L[l] > mCodes_L[l + 1]){
-  //     uint temp = mCodes_L[l];
-  //     mCodes_L[l] = mCodes_L[l + 1];
-  //     mCodes_L[l + 1] = temp;
-  //   }
-  // }
-
   e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
   wait_group_events(1, e);
+
+}
+
+//This kernel merges the sorted warp chunks to produce a finalized sorted array:
+__kernel void globalMortonSort(RVPtr x, RVPtr y, RVPtr z,
+                        RVPtr vx, RVPtr vy, RVPtr vz,
+                        RVPtr ax, RVPtr ay, RVPtr az,
+                        RVPtr mass, RVPtr xMax, RVPtr yMax,
+                        RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                        RVPtr zMin, UVPtr mCodes_G){
+  
+  
+  uint g = (uint) get_global_id(0);
+  uint l = (uint) get_local_id(0);
+  uint group = (uint) get_group_id(0);
+  event_t e[6];
+  
+  __local uint mCodes_Sorted[WARPSIZE];
 
 }
 

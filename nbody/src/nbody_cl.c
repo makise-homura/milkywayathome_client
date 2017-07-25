@@ -1602,6 +1602,46 @@ static cl_int nbLocalMortonSort(NBodyState* st, cl_bool updateState)
     return CL_SUCCESS;
 }
 
+
+static cl_int nbGlobalMortonSort(NBodyState* st, cl_bool updateState)
+{
+    cl_int err;
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event mortonEv;
+    cl_kernel globalMortonSort;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+
+    
+    localMortonSort = kernels->globalMortonSort;
+    global[0] = st->effNBody;
+    local[0] = ws->local[0];
+    int iterations = 1;
+    printf("EFFNBODY: %d\n", st->effNBody);
+    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
+    printf("ITERATIONS REQUIRED: %d\n", iterations);
+    
+    cl_event ev;
+    for(int i = 0; i < iterations; ++i){
+        err = clEnqueueNDRangeKernel(ci->queue, globalMortonSort, 1,
+                                    0, global, local,
+                                    0, NULL, &ev);
+        if (err != CL_SUCCESS)
+        return err;
+    }
+
+    clFinish(ci->queue);    
+    return CL_SUCCESS;
+}
+
 static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
 {
     cl_int err;
@@ -2736,35 +2776,44 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     int n = st->effNBody;
 
     //BEGIN TIMING
-    struct timeval start, end;
+    struct timeval start[3], end[3];
     // sleep(1);
     writeGPUBuffers(st, &gData);
 
 
     //HANDLE RUNNING BOUNDING BOX HERE:
-    
+    gettimeofday(&start[0], NULL);
     err = nbBoundingBox(st, CL_TRUE);
     if (err != CL_SUCCESS)
     {
         mwPerrorCL(err, "Error executing bounding box kernel");
         return NBODY_CL_ERROR;
     }
+    gettimeofday(&end[0], NULL);
     
-    gettimeofday(&start, NULL);
+    gettimeofday(&start[1], NULL);
     //RUN TREE CONSTRUCTION KERNEL:
     err = nbEncodeTree(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing tree construction kernel");
         return NBODY_CL_ERROR;
     }
-    gettimeofday(&end, NULL);
+    gettimeofday(&end[1], NULL);
 
-
+    gettimeofday(&start[2], NULL);
     err = nbLocalMortonSort(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing morton sorting kernel");
         return NBODY_CL_ERROR;
     }
+
+    err = nbGlobalMortonSort(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing morton sorting kernel");
+        return NBODY_CL_ERROR;
+    }
+
+    gettimeofday(&end[2], NULL);
     readGPUBuffers(st, &gData);
     
 
@@ -2780,6 +2829,23 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("----------------------------\n");
     fflush(NULL);
 
+    // printf("----------------------------\n");
+    // printf("TREE CONSTRUCTION:\n");
+    // printf("MORTON CODES:\n");
+    // printf("- - - - - - - - - - - - - - \n");
+    // for(int i = 0; i < st->effNBody; ++i){
+    //     printf("%d\n", gData.mCodes[i]);
+    //     // if(gData.mCodes[i] > 0){
+    //     //     for(int j = i + 1; j < st->effNBody; ++j){
+    //     //         if(gData.mCodes[i] == gData.mCodes[j]){
+    //     //             printf("%d\n", gData.mCodes[i]);                    
+    //     //         }
+    //     //     }
+    //     // }
+    // }
+    printf("----------------------------\n");
+    fflush(NULL);
+
     // real startT, endT;
     // startT = (real)start.tv_sec + (1.0/1000000) * start.tv_usec;
     // endT = (real)end.tv_sec + (1.0/1000000) * end.tv_usec;
@@ -2787,26 +2853,24 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("==============================\n");
     printf("BOUNDING BOX EXECUTION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
-    printf("%.4f ms\n", (((real)end.tv_sec + (real)end.tv_usec * (1.0/1000000)) - ((real)start.tv_sec + (real)start.tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f ms\n", (((real)end[0].tv_sec + (real)end[0].tv_usec * (1.0/1000000)) - ((real)start[0].tv_sec + (real)start[0].tv_usec * (1.0/1000000))) * 1000);
+    printf("==============================\n");
+    fflush(NULL);
+    
+    printf("==============================\n");
+    printf("MORTON CODE GENERATION TIME:\n");
+    // printf("%.4f ms\n", (endT - startT) * 1000);
+    printf("%.4f ms\n", (((real)end[1].tv_sec + (real)end[1].tv_usec * (1.0/1000000)) - ((real)start[1].tv_sec + (real)start[1].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
 
-    printf("----------------------------\n");
-    printf("TREE CONSTRUCTION:\n");
-    printf("MORTON CODES:\n");
-    printf("- - - - - - - - - - - - - - \n");
-    for(int i = 0; i < st->effNBody; ++i){
-        printf("%d\n", gData.mCodes[i]);
-        // if(gData.mCodes[i] > 0){
-        //     for(int j = i + 1; j < st->effNBody; ++j){
-        //         if(gData.mCodes[i] == gData.mCodes[j]){
-        //             printf("%d\n", gData.mCodes[i]);                    
-        //         }
-        //     }
-        // }
-    }
-    printf("----------------------------\n");
+    printf("==============================\n");
+    printf("MORTON CODE SORT EXECUTION TIME:\n");
+    // printf("%.4f ms\n", (endT - startT) * 1000);
+    printf("%.4f ms\n", (((real)end[2].tv_sec + (real)end[2].tv_usec * (1.0/1000000)) - ((real)start[2].tv_sec + (real)start[2].tv_usec * (1.0/1000000))) * 1000);
+    printf("==============================\n");
     fflush(NULL);
+
 }
 
 NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
