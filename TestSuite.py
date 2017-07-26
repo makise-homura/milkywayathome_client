@@ -147,7 +147,8 @@ if 'b' in choice:
             temp += "\n"
         output.write(temp)
         output.close()
-
+'''
 os.system('./bin/milkyway_nbody -h CPU.hist -s GPU.hist')
 print "PLOTTING DATA"
 os.system('python2 PlotNbodyResidualHistograms.py GPUBRUTE.out CPUBRUTE.out GPU.hist CPU.hist')
+'''

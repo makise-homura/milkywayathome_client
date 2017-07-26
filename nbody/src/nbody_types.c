@@ -124,7 +124,7 @@ int destroyNBodyState(NBodyState* st)
     }
 
   #if NBODY_OPENCL
-   
+
 
     if (st->ci)
     {
@@ -172,11 +172,11 @@ void copyGPUTree(gpuTree* a, gpuTree* b, int n){
             a[j].vel[i] = b[j].vel[i];
             a[j].acc[i] = b[j].acc[i];
         }
-        
+
         a[j].mass = b[j].mass;
-        
+
         a[j].isBody = b[j].isBody;
-        
+
         a[j].quad.xx = b[j].quad.xx;
         a[j].quad.xy = b[j].quad.xy;
         a[j].quad.xz = b[j].quad.xz;
@@ -193,7 +193,7 @@ void copyGPUTree(gpuTree* a, gpuTree* b, int n){
 * is being returned.  This could be causing your segfault if you try to use
 * this array because it was never intialized.
 */
-void initGPUArray(gpuArray *a, unsigned int initialSize) 
+void initGPUArray(gpuArray *a, unsigned int initialSize)
 {
     a->data = (gpuTree*)mwCalloc(initialSize, sizeof(gpuTree));
     a->used = 0;
@@ -223,7 +223,7 @@ void freeGPUArray(gpuArray *a)
 //////////////////////////
 //END Dynamic GPU Array
 //////////////////////////
-    
+
 void setInitialNBodyState(NBodyState* st, const NBodyCtx* ctx, Body* bodies, int nbody)
 {
     static const NBodyTree emptyTree = EMPTY_TREE;
@@ -240,7 +240,7 @@ void setInitialNBodyState(NBodyState* st, const NBodyCtx* ctx, Body* bodies, int
     st->bestLikelihood = DEFAULT_WORST_CASE;
     st->bestLikelihood_time = 0.0;
     st->bestLikelihood_count = 0;
-    
+
     /* We'll report the center of mass for each step + the initial one */
     st->nOrbitTrace = ctx->nStep + 1;
     st->orbitTrace = (mwvector*) mwCallocA(st->nOrbitTrace, sizeof(mwvector));
@@ -289,7 +289,7 @@ NBodyStatus nbInitNBodyStateCL(NBodyState* st, const NBodyCtx* ctx)
         mw_printf("CL not setup for CL state initialization\n");
         return NBODY_CONSISTENCY_ERROR;
     }
-    
+
     /* Bodies must be set before trying to use this */
     if (!st->bodytab)
     {
@@ -302,7 +302,7 @@ NBodyStatus nbInitNBodyStateCL(NBodyState* st, const NBodyCtx* ctx)
         mw_printf("Cannot use Lua potential with OpenCL\n");
         return NBODY_UNSUPPORTED;
     }
-    
+
     devInfo = &st->ci->di;
 
     if (!nbCheckDevCapabilities(devInfo, ctx, st->nbody))
@@ -317,12 +317,12 @@ NBodyStatus nbInitNBodyStateCL(NBodyState* st, const NBodyCtx* ctx)
 
     st->usesConsistentMemory =  (mwIsNvidiaGPUDevice(devInfo) && mwNvidiaInlinePTXAvailable(st->ci->plat))
                               || mwDeviceHasConsistentMemory(devInfo);
-    
+
     //We make the tree before creating buffers since we need to know how many cells are used:
     NBodyStatus rc = nbMakeTree(ctx, st);
     if (nbStatusIsFatal(rc))
         return rc;
-                
+
     if (nbLoadKernels(ctx, st))
         return NBODY_CL_ERROR;
 
@@ -480,7 +480,7 @@ void cloneNBodyState(NBodyState* st, const NBodyState* oldSt)
     st->effNBody       = oldSt->effNBody;
     st->bestLikelihood = oldSt->bestLikelihood;
     st->bestLikelihood_count = oldSt->bestLikelihood_count;
-    
+
     st->ignoreResponsive = oldSt->ignoreResponsive;
     st->usesExact = oldSt->usesExact;
     st->usesQuad = oldSt->usesQuad,
@@ -680,4 +680,3 @@ int equalNBodyCtx(const NBodyCtx* ctx1, const NBodyCtx* ctx2)
         && feqWithNan(ctx1->nStep, ctx2->nStep)
         && equalPotential(&ctx1->pot, &ctx2->pot);
 }
-

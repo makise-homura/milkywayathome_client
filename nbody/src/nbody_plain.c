@@ -137,42 +137,42 @@ static inline int get_likelihood(const NBodyCtx* ctx, NBodyState* st, const NBod
     real likelihood = NAN;
     NBodyLikelihoodMethod method;
     HistogramParams hp;
-    
+
     mwbool calculateLikelihood = (nbf->histogramFileName != NULL);
-    
-    
+
+
     if (calculateLikelihood || nbf->histoutFileName || nbf->printHistogram)
     {
         if (nbGetLikelihoodInfo(nbf, &hp, &method) || method == NBODY_INVALID_METHOD)
         {
-            /* this would normally return a print statement 
-             * but I do not want to overload the output since 
+            /* this would normally return a print statement
+             * but I do not want to overload the output since
              * this would run every time step.
              */
             return 0;
         }
     }
-    
+
     if (calculateLikelihood)
     {
-        
+
         histogram = nbCreateHistogram(ctx, st, &hp);
- 
+
         if (!histogram)
         {
-            /* this would normally return a print statement 
-             * but I do not want to overload the output since 
+            /* this would normally return a print statement
+             * but I do not want to overload the output since
              * this would run every time step.
              */
             return 0;
         }
-        
+
         data = nbReadHistogram(nbf->histogramFileName);
-        
+
         if (!data)
         {
             free(histogram);
-            /* if the input histogram does not exist, I do not want the 
+            /* if the input histogram does not exist, I do not want the
              * simulation to terminate as you can still get the output file
              * from it. Therefore, this function will end here but with 0
              */
@@ -187,7 +187,7 @@ static inline int get_likelihood(const NBodyCtx* ctx, NBodyState* st, const NBod
           infinities (not errors) to be the worst case.  The worst case is now the actual
           worst thing that can happen.
 
-        * It previous returned the worse case when the likelihood == 0. 
+        * It previous returned the worse case when the likelihood == 0.
         * Changed it to be best case, 1e-9 which has been added in nbody_defaults.h
         */
         if (likelihood > DEFAULT_WORST_CASE || likelihood < (-1 * DEFAULT_WORST_CASE) || isnan(likelihood))
@@ -203,13 +203,13 @@ static inline int get_likelihood(const NBodyCtx* ctx, NBodyState* st, const NBod
         if(mw_fabs(likelihood) < mw_fabs(st->bestLikelihood))
         {
             st->bestLikelihood = likelihood;
-            
+
             /* Calculating the time that the best likelihood occurred */
             st->bestLikelihood_time = ((real) st->step / (real) ctx->nStep) * ctx->timeEvolve;
-            
+
             /* checking how many times the likelihood was improved */
             st->bestLikelihood_count++;
-            
+
             /* if it is an improvement then write out this histogram */
             if (nbf->histoutFileName)
             {
@@ -217,11 +217,11 @@ static inline int get_likelihood(const NBodyCtx* ctx, NBodyState* st, const NBod
             }
         }
     }
-    
+
     free(histogram);
     free(data);
     return NBODY_SUCCESS;
-    
+
 }
 
 
@@ -229,7 +229,7 @@ static inline int get_likelihood(const NBodyCtx* ctx, NBodyState* st, const NBod
 NBodyStatus nbStepSystemPlain(const NBodyCtx* ctx, NBodyState* st)
 {
     NBodyStatus rc;
-    
+
     const real dt = ctx->timestep;
 
     advancePosVel(st, st->nbody, dt);
@@ -267,9 +267,9 @@ NBodyStatus nbRunSystemPlain(const NBodyCtx* ctx, NBodyState* st, const NBodyFla
     #endif
     real curStep = st->step;
     real Nstep = ctx->nStep;
-    
+
     st->bestLikelihood = DEFAULT_WORST_CASE; //initializing it.
-    
+
     while (st->step < ctx->nStep)
     {
         #ifdef NBODY_BLENDER_OUTPUT
@@ -279,12 +279,12 @@ NBodyStatus nbRunSystemPlain(const NBodyCtx* ctx, NBodyState* st, const NBodyFla
         rc |= nbStepSystemPlain(ctx, st);
 
         curStep = st->step;
-        
+
         if(curStep / Nstep >= ctx->BestLikeStart && ctx->useBestLike)
         {
             get_likelihood(ctx, st, nbf);
         }
-    
+
         if (nbStatusIsFatal(rc))   /* advance N-body system */
             return rc;
 
@@ -299,21 +299,19 @@ NBodyStatus nbRunSystemPlain(const NBodyCtx* ctx, NBodyState* st, const NBodyFla
     printf("%d/%d Steps Completed\n", st->step, ctx->nStep);
 
     for(int i = 0; i < st->nbody; ++i){
-        // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 
-        //  st->bodytab[i].bodynode.bodyID, st->acctab[i].x, st->acctab[i].y, st->acctab[i].z);
-        // printf("BODY ID: %d, VELOCITY: %.15f,%.15f,%.15f\n", 
-        //  st->bodytab[i].bodynode.bodyID, st->bodytab[i].vel.x, st->bodytab[i].vel.y, st->bodytab[i].vel.z);
-        // printf("BODY ID: %d, POSITION: %.15f,%.15f,%.15f\n", 
-        //  st->bodytab[i].bodynode.bodyID, st->bodytab[i].bodynode.pos.x, st->bodytab[i].bodynode.pos.y, st->bodytab[i].bodynode.pos.z);
-        //printf("BODY ID: %d, MASS: %.15f\n", 
-        // st->bodytab[i].bodynode.bodyID, st->bodytab[i].bodynode.mass);
+         printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n",
+          st->bodytab[i].bodynode.bodyID, st->acctab[i].x, st->acctab[i].y, st->acctab[i].z);
+         printf("BODY ID: %d, VELOCITY: %.15f,%.15f,%.15f\n",
+          st->bodytab[i].bodynode.bodyID, st->bodytab[i].vel.x, st->bodytab[i].vel.y, st->bodytab[i].vel.z);
+         printf("BODY ID: %d, POSITION: %.15f,%.15f,%.15f\n",
+          st->bodytab[i].bodynode.bodyID, st->bodytab[i].bodynode.pos.x, st->bodytab[i].bodynode.pos.y, st->bodytab[i].bodynode.pos.z);
+        printf("BODY ID: %d, MASS: %.15f\n",
+         st->bodytab[i].bodynode.bodyID, st->bodytab[i].bodynode.mass);
 
-    }   
+    }
     #ifdef NBODY_BLENDER_OUTPUT
         blenderPrintMisc(st, ctx, startCmPos, perpendicularCmPos);
     #endif
 
     return nbWriteFinalCheckpoint(ctx, st);
 }
-
-

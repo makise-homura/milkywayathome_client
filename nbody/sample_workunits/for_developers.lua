@@ -1,9 +1,9 @@
 -- /* Copyright (c) 2016 Siddhartha Shelton */
 
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- DEAR LUA USER:
--- This is the developer version of the lua parameter file. 
--- It gives all the options you can have. 
+-- This is the developer version of the lua parameter file.
+-- It gives all the options you can have.
 -- Many of these the client will not need.
 
 -- NOTE --
@@ -11,13 +11,13 @@
 -- matter component parameters. meaning you input should look like
 -- ft, bt, rscale_baryon, radius_ratio, baryon mass, mass ratio
 -- typical parameters: 4.0, 1.0, 0.2, 0.2, 12, 0.2
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-        
-        
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
--- -- -- -- -- -- -- -- -- STANDARD  SETTINGS   -- -- -- -- -- -- -- -- -- --        
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-totalBodies           = 8   -- -- NUMBER OF BODIES           -- --
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+-- -- -- -- -- -- -- -- -- STANDARD  SETTINGS   -- -- -- -- -- -- -- -- -- --
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+totalBodies           = 128   -- -- NUMBER OF BODIES           -- --
 nbodyLikelihoodMethod = "EMD"   -- -- HIST COMPARE METHOD        -- --
 nbodyMinVersion       = "1.64"  -- -- MINIMUM APP VERSION        -- --
 
@@ -26,11 +26,11 @@ two_component_model   = false    -- -- TWO COMPONENTS SWITCH      -- --
 use_tree_code         = true    -- -- USE TREE CODE NOT EXACT    -- --
 print_reverse_orbit   = false   -- -- PRINT REVERSE ORBIT SWITCH -- --
 print_out_parameters  = false   -- -- PRINT OUT ALL PARAMETERS   -- --
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 
 
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- -- -- -- -- -- -- -- -- PARAMETER SETTINGS   -- -- -- -- -- -- -- -- -- --
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
@@ -42,26 +42,26 @@ lda_upper_range = 150     -- upepr range for lamdba
 bta_bins        = 1       -- number of beta bins. normally use 1 for 1D hist
 bta_lower_range = -15     -- lower range for beta
 bta_upper_range = 15     -- upper range for beta
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 -- -- -- -- -- -- -- -- -- AlGORITHM OPTIONS -- -- -- -- -- -- -- --
 use_best_likelihood  = false    -- use the best likelihood return code
 best_like_start      = 0.5    -- what percent of sim to start
 use_vel_disps        = false    -- use velocity dispersions in likelihood
-        
+
 timestep_control     = true   -- -- control number of steps    -- --
-Ntime_steps          = 10     -- -- number of timesteps to run -- --
+Ntime_steps          = 1     -- -- number of timesteps to run -- --
 
 -- -- -- -- -- -- -- -- -- DWARF STARTING LOCATION   -- -- -- -- -- -- -- --
 l  = 218
 b  = 53.5
 r  = 28.6
-vx = -156 
-vy = 79 
+vx = -156
+vy = 79
 vz = 107
--- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-        
-        
+-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+
 
 function makePotential()
    if(run_null_potential == true) then
@@ -87,20 +87,20 @@ function get_timestep()
 
         s1 = (rscale_l)^3 / (mass_enc_d + mass_l)
         s2 = (rscale_d)^3 / (mass_enc_l + mass_d)
-        
+
         --return the smaller time step
         if(s1 < s2) then
             s = s1
         else
             s = s2
         end
-        
-        -- I did it this way so there was only one place to change the time step. 
+
+        -- I did it this way so there was only one place to change the time step.
         t = (1 / 100.0) * ( pi_4_3 * s)^(1.0/2.0)
-        
+
     --     tmp = sqr(1/10.0) * sqrt((pi_4_3 * cube(rscale_d)) / (mass_l + mass_d))
     --     print('timestep ', t, tmp)
-    else 
+    else
         t = sqr(1/10.0) * sqrt((pi_4_3 * cube(rscale_l)) / (mass_l))
     end
     t = round(t, 10)
@@ -136,7 +136,7 @@ function makeBodies(ctx, potential)
     if(run_null_potential == true) then
         print("placing dwarf at origin")
         finalPosition, finalVelocity = Vector.create(0, 0, 0), Vector.create(0, 0, 0)
-    else 
+    else
         finalPosition, finalVelocity = reverseOrbit{
             potential = potential,
             position  = lbrToCartesian(ctx, Vector.create(l, b, r)),
@@ -145,7 +145,7 @@ function makeBodies(ctx, potential)
             dt        = ctx.timestep / 10.0
             }
     end
-    
+
     if(print_reverse_orbit == true) then
         local placeholderPos, placeholderVel = PrintReverseOrbit{
             potential = potential,
@@ -157,10 +157,10 @@ function makeBodies(ctx, potential)
         }
         print('Printing reverse orbit')
     end
-    
 
-  
-    if(two_component_model) then 
+
+
+    if(two_component_model) then
         firstModel = predefinedModels.mixeddwarf{
             nbody       = totalBodies,
             prng        = prng,
@@ -170,7 +170,7 @@ function makeBodies(ctx, potential)
             comp2       = Dwarf.plummer{mass = mass_d, scaleLength = rscale_d}, -- Dwarf Options: plummer, nfw, general_hernquist
             ignore      = true
         }
-        
+
     else
         firstModel = predefinedModels.plummer{
             nbody       = totalBodies,
@@ -181,9 +181,9 @@ function makeBodies(ctx, potential)
             scaleRadius = rscale_l,
             ignore      = false
         }
-  
+
     end
-  
+
   return firstModel
 end
 
@@ -193,12 +193,12 @@ function makeHistogram()
      phi = 128.79,
      theta = 54.39,
      psi = 90.70,
-     
+
      -- ANGULAR RANGE AND NUMBER OF BINS
      lambdaStart = lda_lower_range,
      lambdaEnd   = lda_upper_range,
      lambdaBins  = lda_bins,
-     
+
      betaStart = bta_lower_range,
      betaEnd   = bta_upper_range,
      betaBins  = bta_bins

@@ -1,0 +1,133 @@
+-- Performing Test HAVE_FLAG_-std=gnu99
+-- Performing Test HAVE_FLAG_-std=gnu99 - Success
+-- Could NOT find Curses (missing:  CURSES_LIBRARY CURSES_INCLUDE_PATH) 
+-- Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR (missing:  OPENSSL_LIBRARIES OPENSSL_INCLUDE_DIR) 
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- Could NOT find readline (missing:  READLINE_LIBRARY READLINE_INCLUDE_DIR) 
+-- Could NOT find Curses (missing:  CURSES_LIBRARY CURSES_INCLUDE_PATH) 
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- Could NOT find LibGMP (missing:  LIBGMP_LIB LIBGMP_INCLUDE_DIR) 
+-- Could NOT find LibMPFR (missing:  LIBMPFR_LIB LIBMPFR_INCLUDE_DIR) 
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/jayfire/Documents/MilkyWay
+[  1%] Built target separation_core_sse41
+[  1%] Built target separation_core_sse2
+[  2%] Built target separation_core_sse3
+[  3%] Built target xxd
+[  4%] Built target opa
+[  5%] Built target dsfmt
+[ 18%] Built target lua51
+[ 20%] Built target popt
+[ 44%] Built target elf
+[ 53%] Built target separation_kernels
+[ 57%] Built target crlibm
+[ 57%] Built target lua
+[ 58%] Built target separation_core_avx
+[ 61%] Built target milkyway
+[ 72%] Built target separation
+Scanning dependencies of target nbody_lua
+[ 73%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua.c.o
+[ 73%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_util.c.o
+[ 73%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_models.c.o
+[ 75%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_types.c.o
+[ 75%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_misc.c.o
+[ 78%] Built target milkyway_cl
+[ 78%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_type_marshal.c.o
+[ 81%] Built target milkyway_lua
+[ 81%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_nbodyctx.c.o
+Scanning dependencies of target nbody
+[ 81%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_nbodystate.c.o
+[ 81%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_chisq.c.o
+[ 82%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_body.c.o
+[ 83%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_disk.c.o
+[ 83%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_halo.c.o
+[ 83%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_spherical.c.o
+[ 83%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_dwarf.c.o
+[ 84%] Built target milkyway_separation
+[ 84%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_grav.c.o
+[ 85%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_potential.c.o
+[ 86%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_io.c.o
+[ 86%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_curses.c.o
+[ 88%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_types.c.o
+[ 88%] Building C object nbody/CMakeFiles/nbody_lua.dir/src/nbody_lua_types/nbody_lua_histogram_params.c.o
+[ 88%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_tree.c.o
+[ 88%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_orbit_integrator.c.o
+[ 89%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_potential.c.o
+[ 89%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody.c.o
+[ 90%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_plain.c.o
+[ 90%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_check_params.c.o
+[ 91%] Linking C static library ../lib/libnbody_lua.a
+[ 91%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_isotropic.c.o
+[ 91%] Built target nbody_lua
+[ 92%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_mixeddwarf.c.o
+[ 93%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_plummer.c.o
+[ 93%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_dwarf_potential.c.o
+[ 93%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_nfw.c.o
+[ 93%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_hernq.c.o
+[ 94%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_show.c.o
+[ 94%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_checkpoint.c.o
+[ 94%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_shmem.c.o
+[ 95%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_coordinates.c.o
+[ 95%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_defaults.c.o
+[ 96%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_util.c.o
+[ 96%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_emd.c.o
+[ 96%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_mass.c.o
+[ 97%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_likelihood.c.o
+[ 97%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_histogram.c.o
+[ 98%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_caustic.c.o
+[ 98%] Building C object nbody/CMakeFiles/nbody.dir/src/blender_visualizer.c.o
+[ 98%] Linking C static library ../lib/libnbody.a
+[ 98%] Built target nbody
+Scanning dependencies of target milkyway_nbody
+[100%] Building C object nbody/CMakeFiles/milkyway_nbody.dir/src/main.c.o
+[100%] Linking CXX executable ../bin/milkyway_nbody
+nbody/CMakeFiles/milkyway_nbody.dir/build.make:103: recipe for target 'bin/milkyway_nbody' failed
+CMakeFiles/Makefile2:1558: recipe for target 'nbody/CMakeFiles/milkyway_nbody.dir/all' failed
+Makefile:138: recipe for target 'all' failed
+RUNNING CPU SYSTEM:
+-- Performing Test HAVE_FLAG_-std=gnu99
+-- Performing Test HAVE_FLAG_-std=gnu99 - Success
+-- Could NOT find Curses (missing:  CURSES_LIBRARY CURSES_INCLUDE_PATH) 
+-- Could NOT find OpenSSL, try to set the path to OpenSSL root folder in the system variable OPENSSL_ROOT_DIR (missing:  OPENSSL_LIBRARIES OPENSSL_INCLUDE_DIR) 
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- Could NOT find readline (missing:  READLINE_LIBRARY READLINE_INCLUDE_DIR) 
+-- Could NOT find Curses (missing:  CURSES_LIBRARY CURSES_INCLUDE_PATH) 
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- Could NOT find LibGMP (missing:  LIBGMP_LIB LIBGMP_INCLUDE_DIR) 
+-- Could NOT find LibMPFR (missing:  LIBMPFR_LIB LIBMPFR_INCLUDE_DIR) 
+-- AVX compiler flags - ' -mfpmath=sse -msse -msse2 -msse3 -msse4 -msse4.1 -mavx'
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/jayfire/Documents/MilkyWay
+[  2%] Built target popt
+[  3%] Built target separation_core_sse3
+[  4%] Built target dsfmt
+[  4%] Built target separation_core_sse2
+[  5%] Built target opa
+[  6%] Built target separation_core_sse41
+[  7%] Built target xxd
+[ 31%] Built target elf
+[ 44%] Built target lua51
+[ 45%] Built target separation_core_avx
+[ 48%] Built target milkyway
+[ 59%] Built target crlibm
+[ 61%] Built target separation_kernels
+[ 69%] Built target nbody_lua
+[ 69%] Built target lua
+[ 80%] Built target separation
+[ 83%] Built target milkyway_lua
+[ 85%] Built target milkyway_cl
+Scanning dependencies of target nbody
+[ 86%] Built target milkyway_separation
+[ 88%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_types.c.o
+[ 89%] Building C object nbody/CMakeFiles/nbody.dir/src/nbody_plain.c.o
+nbody/CMakeFiles/nbody.dir/build.make:278: recipe for target 'nbody/CMakeFiles/nbody.dir/src/nbody_plain.c.o' failed
+CMakeFiles/Makefile2:1514: recipe for target 'nbody/CMakeFiles/nbody.dir/all' failed
+Makefile:138: recipe for target 'all' failed
+RUNNING CPU SYSTEM:

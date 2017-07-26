@@ -428,7 +428,7 @@ static cl_int nbSetKernelArguments(cl_kernel kern, NBodyBuffers* nbb, cl_bool ex
 //   if (!exact)
 //   {
 //       err = clSetKernelArg(kern, 0, sizeof(cl_mem), &(nbb->input) );
-//       err = clSetKernelArg(kern, 1, sizeof(cl_mem), &(nbb->output) );        
+//       err = clSetKernelArg(kern, 1, sizeof(cl_mem), &(nbb->output) );
 //   }
 //   else
 //   {
@@ -848,88 +848,88 @@ static cl_int printBuffer(CLInfo* ci, cl_mem mem, size_t n, const char* name, in
 //     CLInfo* ci = st->ci;
 //     NBodyBuffers* nbb = st->nbb;
 //     cl_uint nNode = nbFindNNode(&ci->di, st->effNBody);
-// 
+//
 //     if (children)
 //     {
 //         mw_printf("--------------------------------------------------------------------------------\n");
-// 
+//
 //         mw_printf("BEGIN CHILD\n");
 //         printBuffer(ci, nbb->child, NSUB * (nNode + 1), "child", 1);
 //         mw_printf("END CHILD\n");
-// 
+//
 //         mw_printf("BEGIN START\n");
 //         printBuffer(ci, nbb->start, nNode + 1, "start", 1);
 //         mw_printf("END START\n");
-// 
+//
 //         mw_printf("BEGIN MASS\n");
 //         printBuffer(ci, nbb->masses, nNode + 1, "mass", 0);
 //         mw_printf("END MASS\n");
-// 
+//
 //         mw_printf("BEGIN POSX\n");
 //         printBuffer(ci, nbb->pos[0], nNode + 1, "posX", 0);
 //         mw_printf("END POSX\n");
-// 
+//
 //         mw_printf("BEGIN POSY\n");
 //         printBuffer(ci, nbb->pos[1], nNode + 1, "posY", 0);
 //         mw_printf("END POSY\n");
-// 
+//
 //         mw_printf("BEGIN POSZ\n");
 //         printBuffer(ci, nbb->pos[2], nNode + 1, "posZ", 0);
 //         mw_printf("END POSZ\n");
-// 
+//
 //         mw_printf("BEGIN VELX\n");
 //         printBuffer(ci, nbb->vel[0], st->effNBody, "velX", 0);
 //         mw_printf("END VELX\n");
-// 
+//
 //         mw_printf("BEGIN VELY\n");
 //         printBuffer(ci, nbb->vel[1], st->effNBody, "velY", 0);
 //         mw_printf("END VELY\n");
-// 
+//
 //         mw_printf("BEGIN VELZ\n");
 //         printBuffer(ci, nbb->vel[2], st->effNBody, "velZ", 0);
 //         mw_printf("END VELZ\n");
-// 
+//
 //         mw_printf("BEGIN ACCX\n");
 //         printBuffer(ci, nbb->acc[0], st->effNBody, "accX", 0);
 //         mw_printf("END ACCX\n");
-// 
+//
 //         mw_printf("BEGIN ACCY\n");
 //         printBuffer(ci, nbb->acc[1], st->effNBody, "accY", 0);
 //         mw_printf("END ACCY\n");
-// 
+//
 //         mw_printf("BEGIN ACCZ\n");
 //         printBuffer(ci, nbb->acc[2], st->effNBody, "accZ", 0);
 //         mw_printf("END ACCZ\n");
 //     }
-// 
+//
 //     if (quads)
 //     {
 //         mw_printf("BEGIN QUAD.XX\n");
 //         printBuffer(ci, nbb->quad.xx, nNode + 1, "quad.xx", 0);
 //         mw_printf("END QUAD.XX\n");
-// 
+//
 //         mw_printf("BEGIN QUAD.XY\n");
 //         printBuffer(ci, nbb->quad.xy, nNode + 1, "quad.xy", 0);
 //         mw_printf("END QUAD.XY\n");
-// 
+//
 //         mw_printf("BEGIN QUAD.XZ\n");
 //         printBuffer(ci, nbb->quad.xz, nNode + 1, "quad.xz", 0);
 //         mw_printf("ENDQUAD.XZ\n");
-// 
+//
 //         mw_printf("BEGIN QUAD.YY\n");
 //         printBuffer(ci, nbb->quad.yy, nNode + 1, "quad.yy", 0);
 //         mw_printf("END QUAD.YY\n");
-// 
+//
 //         mw_printf("BEGIN QUAD.YZ\n");
 //         printBuffer(ci, nbb->quad.yz, nNode + 1, "quad.yz", 0);
 //         mw_printf("END QUAD.YZ\n");
-// 
+//
 //         mw_printf("BEGIN QUAD.ZZ\n");
 //         printBuffer(ci, nbb->quad.zz, nNode + 1, "quad.zz", 0);
 //         mw_printf("END QUAD.ZZ\n");
 //     }
-// 
-// 
+//
+//
 //     if (tree)
 //     {
 //         TreeStatus ts;
@@ -945,7 +945,7 @@ static cl_int printBuffer(CLInfo* ci, cl_mem mem, size_t n, const char* name, in
 //             nbPrintDebug(&ts);
 //         }
 //     }
-// 
+//
 //     mw_printf("--------------------------------------------------------------------------------\n");
 // }
 
@@ -978,20 +978,20 @@ static cl_int printBuffer(CLInfo* ci, cl_mem mem, size_t n, const char* name, in
 //     TreeStatus ts;
 //     CLInfo* ci = st->ci;
 //     NBodyBuffers* nbb = st->nbb;
-// 
+//
 //     err = nbEnqueueReadTreeStatus(&ts, ci, nbb, CL_TRUE);
 //     if (mw_unlikely(err != CL_SUCCESS))
 //     {
 //         mwPerrorCL(err, "Error reading tree status");
 //         return NBODY_CL_ERROR;
 //     }
-// 
+//
 //     if (mw_unlikely(ts.assertionLine >= 0))
 //     {
 //         mw_printf("Kernel assertion failed: line %d\n", ts.assertionLine);
 //         return NBODY_ASSERTION_FAILURE;
 //     }
-// 
+//
 //     if (mw_unlikely(ts.errorCode != 0))
 //     {
 //         /* Incest is special because we can choose to ignore it */
@@ -1003,7 +1003,7 @@ static cl_int printBuffer(CLInfo* ci, cl_mem mem, size_t n, const char* name, in
 //         else
 //         {
 //             mw_printf("Kernel reported error: %d ", ts.errorCode);
-// 
+//
 //             if (ts.errorCode > 0)
 //             {
 //                 mw_printf("(%s (%u))\n", showNBodyKernelError(ts.errorCode), st->maxDepth);
@@ -1016,7 +1016,7 @@ static cl_int printBuffer(CLInfo* ci, cl_mem mem, size_t n, const char* name, in
 //             }
 //         }
 //     }
-// 
+//
 //     return NBODY_SUCCESS;
 // }
 
@@ -1046,23 +1046,23 @@ static cl_double waitReleaseEventWithTime(cl_event ev)
 //     NBodyBuffers* nbb = st->nbb;
 //     cl_command_queue queue = st->ci->queue;
 //     cl_uint nNode = nbFindNNode(&st->ci->di, st->nbody);
-// 
+//
 //     if (!nbb->quad.xx)
 //     {
 //         return MW_CL_ERROR;
 //     }
-// 
+//
 //     err |= clEnqueueReadBuffer(queue, nbb->quad.xx, CL_FALSE, nNode * sizeof(real), sizeof(real), &quad->xx, 0, NULL, NULL);
 //     err |= clEnqueueReadBuffer(queue, nbb->quad.xy, CL_FALSE, nNode * sizeof(real), sizeof(real), &quad->xy, 0, NULL, NULL);
 //     err |= clEnqueueReadBuffer(queue, nbb->quad.xz, CL_FALSE, nNode * sizeof(real), sizeof(real), &quad->xz, 0, NULL, NULL);
-// 
+//
 //     err |= clEnqueueReadBuffer(queue, nbb->quad.yy, CL_FALSE, nNode * sizeof(real), sizeof(real), &quad->yy, 0, NULL, NULL);
 //     err |= clEnqueueReadBuffer(queue, nbb->quad.yz, CL_FALSE, nNode * sizeof(real), sizeof(real), &quad->yz, 0, NULL, NULL);
-// 
+//
 //     err |= clEnqueueReadBuffer(queue, nbb->quad.zz, CL_FALSE, nNode * sizeof(real), sizeof(real), &quad->zz, 0, NULL, NULL);
-// 
+//
 //     err |= clFlush(queue);
-// 
+//
 //     return err;
 // }
 
@@ -1073,14 +1073,14 @@ static cl_int nbEnqueueReadCenterOfMass(NBodyState* st, mwvector* cmPos)
 //     cl_mem* positions = st->nbb->pos;
 //     cl_command_queue queue = st->ci->queue;
 //     cl_uint nNode = nbFindNNode(&st->ci->di, st->nbody);
-// 
+//
 //     err |= clEnqueueReadBuffer(queue, positions[0], CL_FALSE, nNode * sizeof(real), sizeof(real), &cmPos->x, 0, NULL, NULL);
 //     err |= clEnqueueReadBuffer(queue, positions[1], CL_FALSE, nNode * sizeof(real), sizeof(real), &cmPos->y, 0, NULL, NULL);
 //     err |= clEnqueueReadBuffer(queue, positions[2], CL_FALSE, nNode * sizeof(real), sizeof(real), &cmPos->z, 0, NULL, NULL);
 //     err |= clEnqueueReadBuffer(queue, st->nbb->masses, CL_FALSE, nNode * sizeof(real), sizeof(real), &cmPos->w, 0, NULL, NULL);
-// 
+//
 //     err |= clFlush(queue);
-// 
+//
 //     return err;
 }
 
@@ -1121,13 +1121,13 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 // static void nbReportProgressWithTimings(const NBodyCtx* ctx, const NBodyState* st)
 // {
 //     double frac = (double) st->step / (double) ctx->nStep;
-// 
+//
 //     mw_fraction_done(frac);
-// 
+//
 //     if (st->reportProgress)
 //     {
 //         NBodyWorkSizes* ws = st->workSizes;
-// 
+//
 //         mw_mvprintw(0, 0,
 //                     "Step %d (%f%%):\n"
 //                     "  boundingBox:      %15f ms\n"
@@ -1170,62 +1170,62 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //     cl_event sortEvs[NB_MAX_MAX_DEPTH];
 //     cl_event sumEvs[NB_MAX_MAX_DEPTH];
 //     cl_event quadEvs[NB_MAX_MAX_DEPTH];
-// 
+//
 //     treeStatus.maxDepth = 0;
 //     memset(sortEvs, 0, sizeof(sortEvs));
 //     memset(sumEvs, 0, sizeof(sumEvs));
 //     memset(quadEvs, 0, sizeof(quadEvs));
-// 
+//
 //     err = clEnqueueNDRangeKernel(ci->queue, kernels->boundingBox, 1,
 //                                  NULL, &ws->global[0], &ws->local[0],
 //                                  0, NULL, &boxEv);
 //     if (err != CL_SUCCESS)
 //         goto tree_build_exit;
-// 
+//
 //     /* FIXME: Work sizes */
 //     err = clEnqueueNDRangeKernel(ci->queue, kernels->buildTreeClear, 1,
 //                                  NULL, &ws->global[6], &ws->local[6],
 //                                  0, NULL, &buildTreeClearEv);
 //     if (err != CL_SUCCESS)
 //         goto tree_build_exit;
-// 
+//
 //     if (st->usesConsistentMemory)
 //     {
 //         size_t chunk;
 //         size_t offset[1];
 //         cl_event ev;
 //         cl_event readEv;
-// 
+//
 //         size_t nChunk = st->ignoreResponsive ? 1 : mwDivRoundup((size_t) st->effNBody, ws->global[1]);
 //         cl_uint upperBound = st->ignoreResponsive ? st->effNBody : (cl_int) ws->global[1];
-// 
+//
 //         for (chunk = 0, offset[0] = 0; chunk < nChunk; ++chunk, offset[0] += ws->global[1])
 //         {
 //             if (upperBound > (cl_uint) st->effNBody)
 //                 upperBound = st->effNBody;
-// 
+//
 //             err = clSetKernelArg(kernels->buildTree, 28, sizeof(cl_int), &upperBound);
 //             if (err != CL_SUCCESS)
 //                 goto tree_build_exit;
-// 
+//
 //             err = clEnqueueNDRangeKernel(ci->queue, kernels->buildTree, 1,
 //                                          offset, &ws->global[1], &ws->local[1],
 //                                          0, NULL, &ev);
 //             if (err != CL_SUCCESS)
 //                 goto tree_build_exit;
-// 
+//
 //             err = clEnqueueReadBuffer(ci->queue,
 //                                       nbb->treeStatus,
 //                                       CL_TRUE,
 //                                       0, sizeof(treeStatus), &treeStatus,
 //                                       0, NULL, &readEv);
-// 
+//
 //             if (err != CL_SUCCESS)
 //             {
 //                 clReleaseEvent(readEv);
 //                 goto tree_build_exit;
 //             }
-// 
+//
 //             upperBound += (cl_int) ws->global[1];
 //             ws->timings[1] += waitReleaseEventWithTime(ev);
 //         }
@@ -1234,32 +1234,32 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //     {
 //         cl_uint lastCounts[3] = { 0, 0, 0 };
 //         cl_uint lasti = 0;
-// 
+//
 //         /* Repeat the tree construction kernel until all bodies have been successfully inserted */
 //         do
 //         {
 //             cl_event ev;
 //             cl_event readEv;
-// 
+//
 //             /*
 //               TODO: We can save somewhat on launch overhead and extra
 //               reads by enqueuing a number of iterations based on a running
 //               average of how many it has taken
 //             */
-// 
+//
 //             err = clEnqueueNDRangeKernel(ci->queue, kernels->buildTree, 1,
 //                                          NULL, &ws->global[1], &ws->local[1],
 //                                          0, NULL, &ev);
 //             if (err != CL_SUCCESS)
 //                 goto tree_build_exit;
-// 
+//
 //             err = clFlush(ci->queue);
 //             if (err != CL_SUCCESS)
 //             {
 //                 clReleaseEvent(ev);
 //                 goto tree_build_exit;
 //             }
-// 
+//
 //             err = clEnqueueReadBuffer(ci->queue,
 //                                       nbb->treeStatus,
 //                                       CL_TRUE,
@@ -1270,10 +1270,10 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //                 clReleaseEvent(readEv);
 //                 goto tree_build_exit;
 //             }
-// 
+//
 //             ws->timings[1] += mwReleaseEventWithTimingMS(ev);
 //             ws->timings[1] += mwReleaseEventWithTimingMS(readEv);
-// 
+//
 //             if (treeStatus.maxDepth > st->maxDepth)
 //             {
 //                 mw_printf("Overflow during tree construction (%u > %u)\n",
@@ -1282,7 +1282,7 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //                 err = MW_CL_ERROR;
 //                 goto tree_build_exit;
 //             }
-// 
+//
 //             lastCounts[(lasti++) % 3] = treeStatus.doneCnt;
 //             if ((lastCounts[0] == lastCounts[1]) && (lastCounts[1] == lastCounts[2]))
 //             {
@@ -1293,19 +1293,19 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //                 err = MW_CL_ERROR;
 //                 goto tree_build_exit;
 //             }
-// 
+//
 //             ++buildIterations;
 //         }
 //         while (treeStatus.doneCnt != st->effNBody);
 //     }
-// 
+//
 //     /* FIXME: Work sizes */
 //     err = clEnqueueNDRangeKernel(ci->queue, kernels->summarizationClear, 1,
 //                                  NULL, &ws->global[6], &ws->local[6],
 //                                  0, NULL, &summarizationClearEv);
 //     if (err != CL_SUCCESS)
 //         goto tree_build_exit;
-// 
+//
 //     if (st->usesConsistentMemory)
 //     {
 //         err = clEnqueueNDRangeKernel(ci->queue, kernels->summarization, 1,
@@ -1326,7 +1326,7 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //                 goto tree_build_exit;
 //         }
 //     }
-// 
+//
 //     /* Run the sort kernel as many times as will be necessary in the worst case.
 //        FIXME: This is horribly inefficient. The sort kernel needs to
 //        be redesigned, but this is the minimum effort to make this always correct.
@@ -1339,7 +1339,7 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //         if (err != CL_SUCCESS)
 //             goto tree_build_exit;
 //     }
-// 
+//
 //     if (st->usesQuad)
 //     {
 //         if (st->usesConsistentMemory)
@@ -1363,29 +1363,29 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //             }
 //         }
 //     }
-// 
+//
 //     err = clFinish(ci->queue);
 //     if (err != CL_SUCCESS)
 //         goto tree_build_exit;
-// 
-// 
+//
+//
 // tree_build_exit:
 //     ws->timings[0] += mwReleaseEventWithTiming(boxEv);
 //     ws->chunkTimings[1] = ws->timings[1] / (double) buildIterations;
-// 
+//
 //     ws->timings[1] += mwReleaseEventWithTiming(buildTreeClearEv);
 //     ws->timings[2] += mwReleaseEventWithTiming(summarizationClearEv);
-// 
+//
 //     {
 //         for (depth = 0; depth < treeStatus.maxDepth; ++depth)
 //         {
 //             ws->timings[3] += mwReleaseEventWithTimingMS(sortEvs[depth]);
 //         }
 //     }
-// 
+//
 //     {
 //         cl_uint maxDepth = st->usesConsistentMemory ? 1 : treeStatus.maxDepth;
-// 
+//
 //         for (depth = 0; depth < maxDepth; ++depth)
 //         {
 //             ws->timings[2] += mwReleaseEventWithTimingMS(sumEvs[depth]);
@@ -1395,7 +1395,7 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 //             }
 //         }
 //     }
-// 
+//
 //     return err;
 // }
 
@@ -1431,22 +1431,22 @@ static cl_int nbExecuteForceKernels(NBodyState* st, cl_bool updateState)
         local[0] = ws->local[0];
     }
     //Run kernel:
-    
+
     /////////////////////////////////
     //Not sure what this chunk does:
     //nChunk = st->ignoreResponsive ? 1 : mwDivRoundup((size_t) effNBody, global[0]);
     //upperBound = st->ignoreResponsive ? effNBody : (cl_int) global[0];
     /////////////////////////////////
-    
+
     //printf("%i and %i\n", global[0], local[0]);
-    
+
     cl_event ev;
 
     //Not sure what this is for, seems like it just sets max nbody:
     //err = clSetKernelArg(forceKern, 28, sizeof(cl_uint), &upperBound);
     //if (err != CL_SUCCESS)
         //return err;
-    
+
     err = clEnqueueNDRangeKernel(ci->queue, forceKern, 1,
                                     0, global, local,
                                     0, NULL, &ev);
@@ -1474,11 +1474,11 @@ static cl_int nbAdvanceHalfVelocity(NBodyState* st, cl_bool updateState)
     NBodyWorkSizes* ws = st->workSizes;
     cl_int effNBody = st->effNBody;
 
-    
+
     velKern = kernels->advanceHalfVelocity;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
-    
+
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, velKern, 1,
                                     0, global, local,
@@ -1506,11 +1506,11 @@ static cl_int nbAdvancePosition(NBodyState* st, cl_bool updateState)
     NBodyWorkSizes* ws = st->workSizes;
     cl_int effNBody = st->effNBody;
 
-    
+
     posKern = kernels->advancePosition;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
-    
+
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, posKern, 1,
                                     0, global, local,
@@ -1540,7 +1540,7 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     cl_int effNBody = st->effNBody;
 
 
-    
+
     boundingBox = kernels->boundingBox;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
@@ -1548,7 +1548,7 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     printf("EFFNBODY: %d\n", st->effNBody);
     printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
     printf("ITERATIONS REQUIRED: %d\n", iterations);
-    
+
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
         err = clEnqueueNDRangeKernel(ci->queue, boundingBox, 1,
@@ -1558,7 +1558,7 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
         return err;
     }
 
-    clFinish(ci->queue);    
+    clFinish(ci->queue);
     return CL_SUCCESS;
 }
 
@@ -1580,7 +1580,7 @@ static cl_int nbLocalMortonSort(NBodyState* st, cl_bool updateState)
     cl_int effNBody = st->effNBody;
 
 
-    
+
     localMortonSort = kernels->localMortonSort;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
@@ -1588,7 +1588,7 @@ static cl_int nbLocalMortonSort(NBodyState* st, cl_bool updateState)
     printf("EFFNBODY: %d\n", st->effNBody);
     printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
     printf("ITERATIONS REQUIRED: %d\n", iterations);
-    
+
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
         err = clEnqueueNDRangeKernel(ci->queue, localMortonSort, 1,
@@ -1598,7 +1598,7 @@ static cl_int nbLocalMortonSort(NBodyState* st, cl_bool updateState)
         return err;
     }
 
-    clFinish(ci->queue);    
+    clFinish(ci->queue);
     return CL_SUCCESS;
 }
 
@@ -1619,12 +1619,12 @@ static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
     cl_int effNBody = st->effNBody;
 
 
-    
+
     encodeTree = kernels->encodeTree;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = ceil(log(st->effNBody)/log(local[0]));
-    
+
     printf("BEGINNING TREE CONSTRUCTION\n");
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, encodeTree, 1,
@@ -1644,21 +1644,21 @@ static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
 //     if (st->useCLCheckpointing && nbTimeToCheckpoint(ctx, st))
 //     {
 //         cl_int err;
-// 
+//
 //         err = nbMarshalBodies(st, CL_FALSE);
 //         if (err != CL_SUCCESS)
 //         {
 //             return NBODY_CL_ERROR;
 //         }
-// 
+//
 //         if (nbWriteCheckpoint(ctx, st))
 //         {
 //             return NBODY_CHECKPOINT_ERROR;
 //         }
-// 
+//
 //         mw_checkpoint_completed();
 //     }
-// 
+//
 //     return NBODY_SUCCESS;
 // }
 
@@ -1670,23 +1670,23 @@ static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
 //     static const cl_int falseVal = FALSE;
 //     cl_kernel kernel = st->usesExact ? st->kernels->forceCalculation_Exact : st->kernels->forceCalculation;
 //     cl_int err;
-// 
+//
 //     /* Only calculate accelerations*/
 //     err = clSetKernelArg(kernel, 29, sizeof(cl_int), &falseVal);
 //     if (err != CL_SUCCESS)
 //         return err;
-// 
+//
 //     if (!st->usesExact)
 //     {
 //         err = nbExecuteTreeConstruction(st);
 //         if (err != CL_SUCCESS)
 //             return err;
 //     }
-// 
+//
 //     err = nbExecuteForceKernels(st, CL_FALSE);
 //     if (err != CL_SUCCESS)
 //         return err;
-// 
+//
 //     /* All later steps will be real timesteps */
 //     return clSetKernelArg(kernel, 29, sizeof(cl_int), &trueVal);
 // }
@@ -1698,7 +1698,7 @@ static NBodyStatus nbMainLoopCL(const NBodyCtx* ctx, NBodyState* st)
 //     printf("HERE \n");
 //     NBodyStatus rc = NBODY_SUCCESS;
 //     cl_int err;
-// 
+//
 //     err = nbRunPreStep(st);
 //     if (err != CL_SUCCESS)
 //     {
@@ -1714,7 +1714,7 @@ static NBodyStatus nbMainLoopCL(const NBodyCtx* ctx, NBodyState* st)
 //         perpendicularCmPos=startCmPos;
 //         printf("*Total frames: %d\n", kept_frames);
 //     #endif
-//         
+//
 //     //Main loop:
 //     while (st->step < ctx->nStep)
 //     {
@@ -1727,19 +1727,19 @@ static NBodyStatus nbMainLoopCL(const NBodyCtx* ctx, NBodyState* st)
 //         {
 //             return rc;
 //         }
-// 
+//
 //         rc = nbStepSystemCL(ctx, st);
 //         if (nbStatusIsFatal(rc))
 //         {
 //             return rc;
 //         }
-// 
+//
 //         rc = nbCheckpointCL(ctx, st);
 //         if (nbStatusIsFatal(rc))
 //         {
 //             return rc;
 //         }
-// 
+//
 //         st->step++;
 //         #ifdef NBODY_BLENDER_OUTPUT
 //             if (frame_progress < st->step)
@@ -1754,7 +1754,7 @@ static NBodyStatus nbMainLoopCL(const NBodyCtx* ctx, NBodyState* st)
 //         mwvector finalcmPos;
 //         blenderPrintMisc(st, ctx, startCmPos, perpendicularCmPos);
 //     #endif
-// 
+//
 //     return rc;
 }
 
@@ -1806,16 +1806,16 @@ cl_int nbReleaseBuffers(NBodyState* st)
 //     TreeStatus iniTreeStatus;
 //     CLInfo* ci = st->ci;
 //     NBodyBuffers* nbb = st->nbb;
-// 
+//
 //     memset(&iniTreeStatus, 0, sizeof(iniTreeStatus));
-// 
+//
 //     iniTreeStatus.radius = 0.0;
 //     iniTreeStatus.bottom = 0;
 //     iniTreeStatus.maxDepth = 1;
 //     iniTreeStatus.assertionLine = -1;
 //     iniTreeStatus.errorCode = 0;
 //     iniTreeStatus.blkCnt = 0;
-// 
+//
 //     err = clEnqueueWriteBuffer(ci->queue,
 //                                nbb->treeStatus,
 //                                CL_TRUE,
@@ -1825,7 +1825,7 @@ cl_int nbReleaseBuffers(NBodyState* st)
 //     {
 //         mwPerrorCL(err, "Error writing initial tree status");
 //     }
-// 
+//
 //     return err;
 // }
 
@@ -1952,12 +1952,12 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
 //         nbb->count = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(cl_int));
 //         nbb->sort = mwCreateZeroReadWriteBuffer(ci, st->effNBody * sizeof(cl_int));
 //         nbb->child = mwCreateZeroReadWriteBuffer(ci, NSUB * (nNode + 1) * sizeof(cl_int));
-// 
+//
 //         if (!nbb->start || !nbb->count || !nbb->sort || !nbb->child)
 //         {
 //             return MW_CL_ERROR;
 //         }
-// 
+//
 //         if (ctx->criterion == SW93 || ctx->criterion == NewCriterion)
 //         {
 //             /* This only is for cells, so we could subtract nbody if we wanted */
@@ -2131,39 +2131,39 @@ void nbPrintKernelLimits(NBodyState* st)
 //     mw_printf("Bounding box:\n");
 //     mwGetWorkGroupInfo(kernels->boundingBox, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Tree Build Clear:\n");
 //     mwGetWorkGroupInfo(kernels->buildTreeClear, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Tree Build:\n");
 //     mwGetWorkGroupInfo(kernels->buildTree, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Summarization Clear:\n");
 //     mwGetWorkGroupInfo(kernels->summarizationClear, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Summarization:\n");
 //     mwGetWorkGroupInfo(kernels->summarization, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Sort:\n");
 //     mwGetWorkGroupInfo(kernels->sort, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Quad moments:\n");
 //     mwGetWorkGroupInfo(kernels->quadMoments, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Force calculation:\n");
 //     mwGetWorkGroupInfo(kernels->forceCalculation, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Integration:\n");
 //     mwGetWorkGroupInfo(kernels->integration, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
-// 
+//
 //     mw_printf("Force calculation (Exact):\n");
 //     mwGetWorkGroupInfo(kernels->forceCalculation_Exact, ci, &wgi);
 //     mwPrintWorkGroupInfo(&wgi);
@@ -2388,7 +2388,7 @@ void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
     unsigned int n = 0; //Start at initial index
     const Body* p = NULL;
     //printf("%i\n", st->tree.cellUsed);
-    
+
     while(q != NULL){
         mwvector pos;
         pos = Pos(q);
@@ -2397,12 +2397,12 @@ void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
         gpT[n].pos[2] = pos.z;
         gpT[n].mass = q->mass; //Set mass
         //printf("%f\n", gpT[n].mass);
-        
+
         if(isBody(q)){ //Check if q is a body
             p = q;
             //#ifdef DEBUG
               gpT[n].bodyID = p->bodynode.bodyID;
-              
+
             //#endif
             gpT[n].vel[0] = p->vel.x;
             gpT[n].vel[1] = p->vel.y;
@@ -2421,7 +2421,7 @@ void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
             q = Next(q); //If we are in a body, we can't go deeper, have to go next
         }
         else{   //If q is not a body, it must be a cell
-            
+
             gpT[n].isBody = 0; //Flag as not body
             if(ctx->useQuad){ //If using quad, calculate quad moments
                 gpT[n].quad.xx = Quad(q).xx;
@@ -2439,7 +2439,7 @@ void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
                 gpT[n].quad.yz = -1;
                 gpT[n].quad.zz = -1;
             }
-            
+
             //Set next index
             unsigned int numChild = 0;
             if(Next(q) != NULL){
@@ -2468,7 +2468,7 @@ void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
             }
             q = More(q); //If we are in a cell, we must go deeper
         }
-        
+
         ++n; //Increment our index
         //printf("%i \n", n);
     }
@@ -2515,6 +2515,7 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
       gData->acc[0][i] = 0;
       gData->acc[1][i] = 0;
       gData->acc[2][i] = 0;
+      printf("%.15f\n%.15f\n%.15f\n%.15f\n%.15f\n%.15f\n", gData->pos[0][i], gData->pos[1][i], gData->pos[2][i], gData->vel[0][i], gData->vel[1][i], gData->vel[2][i]);
       gData->mass[i] = st->bodytab[i].bodynode.mass;
       if(!st->usesExact){
         gData->max[0][i] = st->bodytab[i].bodynode.pos.x;
@@ -2531,7 +2532,7 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
       gData->pos[2][i] = 0;
       gData->vel[0][i] = 0;
       gData->vel[1][i] = 0;
-      gData->vel[2][i] = 0; 
+      gData->vel[2][i] = 0;
       gData->acc[0][i] = 0;
       gData->acc[1][i] = 0;
       gData->acc[2][i] = 0;
@@ -2550,7 +2551,7 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
 
 void writeGPUBuffers(NBodyState* st, gpuData* gData){
 //   printf("WRITING TO GPU BUFFERS: %f\n", gData->max[0][0]);
-  CLInfo* ci = st->ci;   
+  CLInfo* ci = st->ci;
   cl_int err = CL_SUCCESS;
   cl_uint i;
   cl_command_queue q = st->ci->queue;
@@ -2597,7 +2598,7 @@ void writeGPUBuffers(NBodyState* st, gpuData* gData){
 
 void readGPUBuffers(NBodyState* st, gpuData* gData){
 //   printf("READING FROM GPU BUFFERS\n");
-  CLInfo* ci = st->ci;   
+  CLInfo* ci = st->ci;
   cl_int err = CL_SUCCESS;
   cl_uint i;
   cl_command_queue q = st->ci->queue;
@@ -2655,7 +2656,7 @@ void readGPUBuffers(NBodyState* st, gpuData* gData){
 NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
   printf("RUNNING OPENCL EXACT NBODY APPLICATION\n");
   printf("THE GPU TREE SIZE IS: %d\n", st->effNBody);
-  CLInfo* ci = st->ci;   
+  CLInfo* ci = st->ci;
   cl_int err;
   cl_uint i;
   cl_command_queue q = st->ci->queue;
@@ -2726,7 +2727,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
 {
     printf("RUNNING OPENCL TREECODE NBODY APPLICATION\n");
     printf("THE GPU TREE SIZE IS: %d\n", st->effNBody);
-    CLInfo* ci = st->ci;   
+    CLInfo* ci = st->ci;
     cl_int err;
     cl_uint i;
     cl_command_queue q = st->ci->queue;
@@ -2742,14 +2743,14 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
 
 
     //HANDLE RUNNING BOUNDING BOX HERE:
-    
+
     err = nbBoundingBox(st, CL_TRUE);
     if (err != CL_SUCCESS)
     {
         mwPerrorCL(err, "Error executing bounding box kernel");
         return NBODY_CL_ERROR;
     }
-    
+
     gettimeofday(&start, NULL);
     //RUN TREE CONSTRUCTION KERNEL:
     err = nbEncodeTree(st, CL_TRUE);
@@ -2766,7 +2767,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         return NBODY_CL_ERROR;
     }
     readGPUBuffers(st, &gData);
-    
+
 
     // for(int j = 0; j < st->effNBody; ++j){
     //   printf("%.3f | %.3f | %.3f\n", gData.max[0][j], gData.max[1][j], gData.max[2][j]);
@@ -2800,7 +2801,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         // if(gData.mCodes[i] > 0){
         //     for(int j = i + 1; j < st->effNBody; ++j){
         //         if(gData.mCodes[i] == gData.mCodes[j]){
-        //             printf("%d\n", gData.mCodes[i]);                    
+        //             printf("%d\n", gData.mCodes[i]);
         //         }
         //     }
         // }
@@ -2821,11 +2822,11 @@ NBodyStatus nbStripBodies(NBodyState* st, gpuTree* gpuData){ //Function to strip
     int minimumBID = n;
     for(int i = 0; i < n; ++i){
         if(gpuData[i].isBody == 1){
-           // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 
+           // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n",
            // gpuData[i].bodyID, gpuData[i].acc[0], gpuData[i].acc[1], gpuData[i].acc[2]);
-          // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n", 
+          // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n",
           // gpuData[i].bodyID, gpuData[i].vel[0], gpuData[i].vel[1], gpuData[i].vel[2]);
-          // printf("BODY ID: %d, POSITION: %f,%f,%f\n", 
+          // printf("BODY ID: %d, POSITION: %f,%f,%f\n",
           // gpuData[i].bodyID, gpuData[i].pos[0], gpuData[i].pos[1], gpuData[i].pos[2]);
           st->bodytab[j].bodynode.pos.x = gpuData[i].pos[0];
           st->bodytab[j].bodynode.pos.y = gpuData[i].pos[1];
@@ -2848,17 +2849,17 @@ NBodyStatus nbStripBodiesSoA(NBodyState* st, gpuData* gData){ //Function to stri
   printf("STRIPPING BODIES FROM BUFFER STRUCTURE\n");
   int n = st->effNBody;
   for(int i = 0; i < n; ++i){
-    // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 
+    // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n",
     //   i, gData->acc[0][i], gData->acc[1][i], gData->acc[2][i]);
-    // printf("BODY ID: %d, VELOCITY: %.15f,%.15f,%.15f\n", 
+    // printf("BODY ID: %d, VELOCITY: %.15f,%.15f,%.15f\n",
     //   i, gData->vel[0], gData->vel[1], gData->vel[2]);
-    // printf("BODY ID: %d, POSITION: %.15f,%.15f,%.15f\n", 
+    // printf("BODY ID: %d, POSITION: %.15f,%.15f,%.15f\n",
     //   i, gData->pos[0][i], gData->pos[1][i], gData->pos[2][i]);
-    // printf("BODY ID: %d, MASS: %.15f\n", 
+    // printf("BODY ID: %d, MASS: %.15f\n",
     //   i, gData->mass[i]);
-    // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n", 
+    // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n",
     // gpuData[i].bodyID, gpuData[i].vel[0], gpuData[i].vel[1], gpuData[i].vel[2]);
-    // printf("BODY ID: %d, POSITION: %f,%f,%f\n", 
+    // printf("BODY ID: %d, POSITION: %f,%f,%f\n",
     // gpuData[i].bodyID, gpuData[i].pos[0], gpuData[i].pos[1], gpuData[i].pos[2]);
     if(i < st->nbody){
         st->bodytab[i].bodynode.pos.x = gData->pos[0][i];
@@ -2885,4 +2886,3 @@ NBodyStatus nbRunSystemCL(const NBodyCtx* ctx, NBodyState* st)
     }
     return nbWriteFinalCheckpoint(ctx, st);
 }
-
