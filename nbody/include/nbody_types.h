@@ -215,6 +215,7 @@ typedef struct{
     cl_mem min[3];
 
     cl_mem mCodes;
+    cl_mem iteration;
 
 }NBodyBuffers;
 
@@ -332,6 +333,7 @@ typedef struct
     real* min[3];
 
     uint32_t* mCodes;
+    uint32_t* iteration;
 
 }gpuData;
 

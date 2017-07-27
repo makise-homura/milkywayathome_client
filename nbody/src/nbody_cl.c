@@ -410,6 +410,7 @@ static cl_int nbSetKernelArguments(cl_kernel kern, NBodyBuffers* nbb, cl_bool ex
         err = nbSetMemArrayArgs(kern, nbb->max, 10);
         err = nbSetMemArrayArgs(kern, nbb->min, 13);
         err = clSetKernelArg(kern, 16, sizeof(cl_mem), &(nbb->mCodes));
+        err = clSetKernelArg(kern, 17, sizeof(cl_mem), &(nbb->iteration));
     }
     else
     {
@@ -1625,13 +1626,16 @@ static cl_int nbGlobalMortonSort(NBodyState* st, cl_bool updateState)
 
     
     globalMortonSort = kernels->globalMortonSort;
-    global[0] = st->effNBody;
-    local[0] = ws->local[0];
-    int iterations = 1;
-    // int iterations = ceil(log((st->effNBody/local[0]))/log(2));
+    global[0] = st->effNBody/(ws->local[0] * 2);
+    local[0] = 1;
+    // int iterations = 1;
+    int iterations = ceil(log(global[0])/log(2));
+    printf("==========GLOBAL MORTON SORT=============\n");
     printf("EFFNBODY: %d\n", st->effNBody);
     printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
-    printf("ITERATIONS REQUIRED: %d\n", iterations);
+    printf("ITERATIONS REQUIRED: %d\n", iterations + 1);
+    printf("INITIAL GLOBAL RANGE: %d\n", global[0]);
+    printf("=========================================\n");
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
         err = clEnqueueNDRangeKernel(ci->queue, globalMortonSort, 1,
@@ -1917,6 +1921,7 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
     st->nbb->mass = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
     if(!st->usesExact){
         st->nbb->mCodes = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
+        st->nbb->iteration = mwCreateZeroReadWriteBuffer(ci, sizeof(uint32_t));
         for(int i = 0; i < 3; ++i){
             st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
             st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));

@@ -1321,7 +1321,7 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes){
+                        RVPtr zMin, UVPtr mCodes, UVPtr iteration){
  
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
@@ -1432,7 +1432,7 @@ __kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes_G){
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration){
   
   
   uint g = (uint) get_global_id(0);
@@ -1486,7 +1486,7 @@ __kernel void globalMortonSort(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes_G){
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration){
   
   
   uint g = (uint) get_global_id(0);
@@ -1496,18 +1496,16 @@ __kernel void globalMortonSort(RVPtr x, RVPtr y, RVPtr z,
   event_t e[1];
 
   
-  __local uint mCodes_L[WARPSIZE];
+  __local uint mCodes_L[10000];
 
 
-  mCodes_G[0] = 0;
-  barrier(CLK_GLOBAL_MEM_FENCE);
-  // e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
-  // wait_group_events(1, e);
+  e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
+  wait_group_events(1, e);
 
-  // mCodes_L[0] = get_local_size(0);
+  mCodes_L[l] = get_global_size(0);
   
-  // e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
-  // wait_group_events(1, e);
+  e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
+  wait_group_events(1, e);
 
 }
 
@@ -1516,7 +1514,7 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes_G){
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration){
 
   uint g = (uint) get_global_id(0);
   uint l = (uint) get_local_id(0);
@@ -1532,8 +1530,8 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
   pos_local[l].z = (z[g] - zMin[0])/(zMax[0]-zMin[0]);
 
   //CALCULATE MORTON CODE
-  mCodes_L[l] = encodeLocation(pos_local[l]);
-  // mCodes_L[l] = l % (WARPSIZE - l);
+  // mCodes_L[l] = encodeLocation(pos_local[l]);
+  mCodes_L[l] = l;
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
