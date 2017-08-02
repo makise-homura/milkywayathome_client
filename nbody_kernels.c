@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 
 #ifdef __APPLE__
@@ -11,15 +12,16 @@
 #endif
 
 
-#define NBODIES (128)
+#define NBODIES (1024)
 #define DWARFMASS (12)
 #define MAX_SOURCE_SIZE (0x100000)
 //kernels to test
 //NBODY_KERNEL
-//forceCalculationExact- FCE
-//advanceHalfVelocity- AHV
-//advancePosition- AP
-//boundingBox- BB
+//forceCalculationExact
+//advanceHalfVelocity
+//advancePosition
+//boundingBox
+//encodeTree
 
 
 int main(int argc, char *argv[]) {
@@ -35,7 +37,14 @@ int main(int argc, char *argv[]) {
   cl_uint ret;
   cl_uint address_bits;
   size_t size;
-  //staticBodies formatting: x,y,z,vx,vy,vz. mass = .375000, acceleration = 0,0,0
+  /*staticBodies formatting:
+  x
+  y
+  z
+  vx
+  vy
+  vz
+  */
   double* x = (double *) malloc(NBODIES *sizeof(double));
   double* y = (double *) malloc(NBODIES *sizeof(double));
   double* z = (double *) malloc(NBODIES *sizeof(double));
@@ -46,12 +55,12 @@ int main(int argc, char *argv[]) {
   double* ay = (double *) malloc(NBODIES *sizeof(double));
   double* az = (double *) malloc(NBODIES *sizeof(double));
   double* mass = (double *) malloc(NBODIES *sizeof(double));
-  double* xMax = (double *) malloc(sizeof(double));
-  double* yMax = (double *) malloc(sizeof(double));
-  double* zMax = (double *) malloc(sizeof(double));
-  double* xMin = (double *) malloc(sizeof(double));
-  double* yMin = (double *) malloc(sizeof(double));
-  double* zMin = (double *) malloc(sizeof(double));
+  double* xMax = (double *) malloc(NBODIES *sizeof(double));
+  double* yMax = (double *) malloc(NBODIES *sizeof(double));
+  double* xMin = (double *) malloc(NBODIES *sizeof(double));
+  double* zMax = (double *) malloc(NBODIES *sizeof(double));
+  double* yMin = (double *) malloc(NBODIES *sizeof(double));
+  double* zMin = (double *) malloc(NBODIES *sizeof(double));
   uint* mCodes = (uint *) malloc(NBODIES *sizeof(uint));
 
   char const* const Bodies = "staticBodies.txt";
@@ -79,15 +88,13 @@ int main(int argc, char *argv[]) {
       i++;
   }
   fclose(file);
-  /*
-  xMax[0] = 5;
-  yMax[0] = 5;
-  zMax[0] = 5;
-  xMin[0] = 2;
-  yMin[0] = 2;
-  zMin[0] = 2;
-  mCodes[0] = 1;
-  */
+  memcpy(xMax, x, NBODIES *sizeof(double));
+  memcpy(yMax, y, NBODIES *sizeof(double));
+  memcpy(zMax, z, NBODIES *sizeof(double));
+  memcpy(xMin, x, NBODIES *sizeof(double));
+  memcpy(yMin, y, NBODIES *sizeof(double));
+  memcpy(zMin, z, NBODIES *sizeof(double));
+
 
 
 
@@ -136,24 +143,7 @@ int main(int argc, char *argv[]) {
   cl_mem memobjmCodes = clCreateBuffer(context, CL_MEM_READ_WRITE,NBODIES * sizeof(uint), NULL, &ret);
 
 
-  /*copy data from arrays to memobjects*/
-  ret = clEnqueueWriteBuffer(command_queue, memobjx, CL_TRUE, 0, NBODIES *sizeof(double), x, 0, NULL, NULL);
-	ret = clEnqueueWriteBuffer(command_queue, memobjy, CL_TRUE, 0, NBODIES *sizeof(double), y, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjz, CL_TRUE, 0, NBODIES *sizeof(double), z, 0, NULL, NULL);
-	ret = clEnqueueWriteBuffer(command_queue, memobjvx, CL_TRUE, 0, NBODIES *sizeof(double), vx, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjvy, CL_TRUE, 0, NBODIES *sizeof(double), vy, 0, NULL, NULL);
-	ret = clEnqueueWriteBuffer(command_queue, memobjvz, CL_TRUE, 0, NBODIES *sizeof(double), vz, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjax, CL_TRUE, 0, NBODIES *sizeof(double), ax, 0, NULL, NULL);
-	ret = clEnqueueWriteBuffer(command_queue, memobjay, CL_TRUE, 0, NBODIES *sizeof(double), ay, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjaz, CL_TRUE, 0, NBODIES *sizeof(double), az, 0, NULL, NULL);
-	ret = clEnqueueWriteBuffer(command_queue, memobjmass, CL_TRUE, 0, NBODIES *sizeof(double), mass, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjxMax, CL_TRUE, 0, NBODIES *sizeof(double), xMax, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjyMax, CL_TRUE, 0, NBODIES *sizeof(double), yMax, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjzMax, CL_TRUE, 0, NBODIES *sizeof(double), zMax, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjxMin, CL_TRUE, 0, NBODIES *sizeof(double), xMin, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjyMin, CL_TRUE, 0, NBODIES *sizeof(double), yMin, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjzMin, CL_TRUE, 0, NBODIES *sizeof(double), zMin, 0, NULL, NULL);
-  ret = clEnqueueWriteBuffer(command_queue, memobjmCodes, CL_TRUE, 0, NBODIES *sizeof(uint), mCodes, 0, NULL, NULL);
+
 
 
   program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
@@ -179,6 +169,25 @@ int main(int argc, char *argv[]) {
   }
 
   for (int i = 0; i < argc-1; i++) {
+    /*copy data from arrays to memobjects*/
+    ret = clEnqueueWriteBuffer(command_queue, memobjx, CL_TRUE, 0, NBODIES *sizeof(double), x, 0, NULL, NULL);
+  	ret = clEnqueueWriteBuffer(command_queue, memobjy, CL_TRUE, 0, NBODIES *sizeof(double), y, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjz, CL_TRUE, 0, NBODIES *sizeof(double), z, 0, NULL, NULL);
+  	ret = clEnqueueWriteBuffer(command_queue, memobjvx, CL_TRUE, 0, NBODIES *sizeof(double), vx, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjvy, CL_TRUE, 0, NBODIES *sizeof(double), vy, 0, NULL, NULL);
+  	ret = clEnqueueWriteBuffer(command_queue, memobjvz, CL_TRUE, 0, NBODIES *sizeof(double), vz, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjax, CL_TRUE, 0, NBODIES *sizeof(double), ax, 0, NULL, NULL);
+  	ret = clEnqueueWriteBuffer(command_queue, memobjay, CL_TRUE, 0, NBODIES *sizeof(double), ay, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjaz, CL_TRUE, 0, NBODIES *sizeof(double), az, 0, NULL, NULL);
+  	ret = clEnqueueWriteBuffer(command_queue, memobjmass, CL_TRUE, 0, NBODIES *sizeof(double), mass, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjxMax, CL_TRUE, 0, NBODIES *sizeof(double), xMax, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjyMax, CL_TRUE, 0, NBODIES *sizeof(double), yMax, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjzMax, CL_TRUE, 0, NBODIES *sizeof(double), zMax, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjxMin, CL_TRUE, 0, NBODIES *sizeof(double), xMin, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjyMin, CL_TRUE, 0, NBODIES *sizeof(double), yMin, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjzMin, CL_TRUE, 0, NBODIES *sizeof(double), zMin, 0, NULL, NULL);
+    ret = clEnqueueWriteBuffer(command_queue, memobjmCodes, CL_TRUE, 0, NBODIES *sizeof(uint), mCodes, 0, NULL, NULL);
+
     kernel[i] = clCreateKernel(program, argv[i+1], &ret);
     /*SET KERNEL ARGS*/
     ret = clSetKernelArg(kernel[i], 0, sizeof(cl_mem), (void *)&memobjx);
@@ -200,7 +209,7 @@ int main(int argc, char *argv[]) {
       ret = clSetKernelArg(kernel[i], 15, sizeof(cl_mem), (void *)&memobjzMin);
       ret = clSetKernelArg(kernel[i], 16, sizeof(cl_mem), (void *)&memobjmCodes);
     }
-  }
+
 
 
 
@@ -209,11 +218,15 @@ int main(int argc, char *argv[]) {
   clGetDeviceInfo(device_id, CL_DEVICE_ADDRESS_BITS, 0, NULL, &size);
   clGetDeviceInfo(device_id, CL_DEVICE_ADDRESS_BITS, size, (void *)&address_bits, NULL);
   size_t temp = address_bits;
-  for (int i = 0; i < argc-1; i++) {
-    ret = clEnqueueNDRangeKernel(command_queue, kernel[i], 1, NULL, &temp, NULL, 0, NULL,NULL);
-    /*Actually run the kernel*/
-    //ret = clEnqueueTask(command_queue, kernel, 0, NULL, NULL);
-    //ret = clFlush(command_queue);
+    if (strcmp(argv[i+1],"boundingBox") == 0) {
+      for (int j = 0; j < ceil(log2(NBODIES)); j++) {
+        ret = clEnqueueNDRangeKernel(command_queue, kernel[i], 1, NULL, &temp, NULL, 0, NULL,NULL);
+      }
+    } else {
+      ret = clEnqueueNDRangeKernel(command_queue, kernel[i], 1, NULL, &temp, NULL, 0, NULL,NULL);
+    }
+
+
     printf("==================\n");
     printf("%s\n", argv[i+1]);
     printf("==================\n");
@@ -235,15 +248,15 @@ int main(int argc, char *argv[]) {
     ret = clEnqueueReadBuffer(command_queue, memobjaz, CL_TRUE, 0, NBODIES *sizeof(double), (void *)az, 0, NULL, NULL);
     ret = clEnqueueReadBuffer(command_queue, memobjmass, CL_TRUE, 0, NBODIES *sizeof(double), (void *)mass, 0, NULL, NULL);
     if (strcmp(argv[i+1],"boundingBox") == 0 || strcmp(argv[i+1],"encodeTree") == 0) {
-      ret = clEnqueueReadBuffer(command_queue, memobjxMin, CL_TRUE, 0, NBODIES *sizeof(double), (void *)xMin, 0, NULL, NULL);
-      ret = clEnqueueReadBuffer(command_queue, memobjyMin, CL_TRUE, 0, NBODIES *sizeof(double), (void *)yMin, 0, NULL, NULL);
-      ret = clEnqueueReadBuffer(command_queue, memobjzMin, CL_TRUE, 0, NBODIES *sizeof(double), (void *)zMin, 0, NULL, NULL);
       ret = clEnqueueReadBuffer(command_queue, memobjxMax, CL_TRUE, 0, NBODIES *sizeof(double), (void *)xMax, 0, NULL, NULL);
       ret = clEnqueueReadBuffer(command_queue, memobjyMax, CL_TRUE, 0, NBODIES *sizeof(double), (void *)yMax, 0, NULL, NULL);
       ret = clEnqueueReadBuffer(command_queue, memobjzMax, CL_TRUE, 0, NBODIES *sizeof(double), (void *)zMax, 0, NULL, NULL);
+      ret = clEnqueueReadBuffer(command_queue, memobjxMin, CL_TRUE, 0, NBODIES *sizeof(double), (void *)xMin, 0, NULL, NULL);
+      ret = clEnqueueReadBuffer(command_queue, memobjyMin, CL_TRUE, 0, NBODIES *sizeof(double), (void *)yMin, 0, NULL, NULL);
+      ret = clEnqueueReadBuffer(command_queue, memobjzMin, CL_TRUE, 0, NBODIES *sizeof(double), (void *)zMin, 0, NULL, NULL);
       ret = clEnqueueReadBuffer(command_queue, memobjmCodes, CL_TRUE, 0, NBODIES *sizeof(uint), (void *)mCodes, 0, NULL, NULL);
     }
-    ret = clFlush(command_queue);
+    //ret = clFlush(command_queue);
 
 
 

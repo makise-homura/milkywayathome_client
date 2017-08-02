@@ -2,7 +2,7 @@ typedef __global double* restrict RVPtr;
 typedef __global volatile uint* restrict UVPtr;
 #define EPS2 0.002312
 #define WARPSIZE 64
-#define EFFNBODY 128
+#define EFFNBODY 1024
 #define TIMESTEP 1
 #define USE_EXTERNAL_POTENTIAL false
 
