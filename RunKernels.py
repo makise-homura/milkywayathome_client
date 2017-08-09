@@ -17,5 +17,5 @@ for i in choices:
     finalkern += kernels[int(i)]
     finalkern += ' '
 print finalkern
-os.system('gcc nbody_kernels.c -o kernels -lOpenCL')
+os.system('gcc nbody_kernels.c -o kernels -lOpenCL -lm')
 os.system('./kernels {}'.format(finalkern))

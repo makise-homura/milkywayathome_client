@@ -2515,7 +2515,7 @@ void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
       gData->acc[0][i] = 0;
       gData->acc[1][i] = 0;
       gData->acc[2][i] = 0;
-      printf("%.15f\n%.15f\n%.15f\n%.15f\n%.15f\n%.15f\n", gData->pos[0][i], gData->pos[1][i], gData->pos[2][i], gData->vel[0][i], gData->vel[1][i], gData->vel[2][i]);
+      //printf("%.15f\n%.15f\n%.15f\n%.15f\n%.15f\n%.15f\n", gData->pos[0][i], gData->pos[1][i], gData->pos[2][i], gData->vel[0][i], gData->vel[1][i], gData->vel[2][i]);
       gData->mass[i] = st->bodytab[i].bodynode.mass;
       if(!st->usesExact){
         gData->max[0][i] = st->bodytab[i].bodynode.pos.x;

@@ -1,4 +1,4 @@
-typedef __global double* restrict RVPtr;
+  typedef __global double* restrict RVPtr;
 typedef __global volatile uint* restrict UVPtr;
 #define EPS2 0.002312
 #define WARPSIZE 64
@@ -79,6 +79,7 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
 
   wait_group_events(6, e);
 
+
   // maxTemp[0][l] = xMax[g];
   // maxTemp[1][l] = yMax[g];
   // maxTemp[2][l] = zMax[g];
@@ -92,6 +93,7 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
   // zMax[g] = zMin[g] = z[g];
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+
 
   int iter = (int)log2((double)WARPSIZE);
 
@@ -118,6 +120,7 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
 
   }
 
+
   //Copy back from local memory to global memory:
 
   e[0] = async_work_group_copy(xMax + group, maxTemp[0], 1, 0);
@@ -138,6 +141,7 @@ __kernel void boundingBox(RVPtr x, RVPtr y, RVPtr z,
   //   zMin[group] = minTemp[2][l];
   // }
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+
 
 }
 
