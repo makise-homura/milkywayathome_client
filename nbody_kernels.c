@@ -35,6 +35,7 @@ int main(int argc, char *argv[]) {
   cl_uint ret_num_platforms;
   cl_uint ret;
   cl_uint address_bits;
+  cl_uint global;
   size_t size;
 
   FILE *fp;
@@ -83,16 +84,19 @@ int main(int argc, char *argv[]) {
    printf("%s\n", log);
   }
 
+
+  clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, 0, NULL, &size);
+  clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, size, (void *)&global, NULL);
+  size_t global_work_size = global;
+
   clGetDeviceInfo(device_id, CL_DEVICE_ADDRESS_BITS, 0, NULL, &size);
   clGetDeviceInfo(device_id, CL_DEVICE_ADDRESS_BITS, size, (void *)&address_bits, NULL);
+  size_t local_work_size = address_bits;
   int WARPSIZE = address_bits;
-  size_t local_size = address_bits;
-
   int EFFNBODY = fmax(WARPSIZE, pow(2,ceil(log2(NBODIES))));
-  //printf("%i\n\n\n\n",EFFNBODY);
-  size_t global_size = EFFNBODY;
 
-  int MAX_ITERATIONS = ceil(log((double)EFFNBODY)/log((double)local_size));
+
+  int MAX_ITERATIONS = ceil(log((double)EFFNBODY)/log((double)local_work_size));
 
   /*READ STATIC BODIES FILE FOR INITIAL VALUES*/
   /*staticBodies formatting:
@@ -228,10 +232,11 @@ int main(int argc, char *argv[]) {
     cl_event ev;
     if (strcmp(argv[i+1],"boundingBox") == 0) {
       for (int j = 0; j < MAX_ITERATIONS; j++) {
-        ret = clEnqueueNDRangeKernel(command_queue, kernel[i], 1, NULL, &global_size, &local_size, 0, NULL,&ev);
+        ret = clEnqueueNDRangeKernel(command_queue, kernel[i], 1, NULL, &global_work_size, &local_work_size, 0, NULL,&ev);
+        clFinish(command_queue);
       }
     } else {
-      ret = clEnqueueNDRangeKernel(command_queue, kernel[i], 1, NULL, &global_size, &local_size, 0, NULL,&ev);
+      ret = clEnqueueNDRangeKernel(command_queue, kernel[i], 1, NULL, &global_work_size, &local_work_size, 0, NULL,&ev);
     }
     //clFinish(command_queue);
 
