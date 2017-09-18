@@ -272,7 +272,7 @@ typedef struct
 {
     cl_kernel boundingBox;
     cl_kernel encodeTree;
-    cl_kernel localMortonSort;
+    cl_kernel bitonicMortonSort;
     cl_kernel globalMortonSort;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;

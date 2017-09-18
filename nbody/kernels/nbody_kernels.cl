@@ -1425,60 +1425,148 @@ inline uint encodeLocation(real4 pos){
   return xx * 4 + yy * 2 + zz;
 }
 
-
 //This kernel uses a bitonic sorting algorithm to sort each warp's morton codes:
-__kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
-                        RVPtr vx, RVPtr vy, RVPtr vz,
-                        RVPtr ax, RVPtr ay, RVPtr az,
-                        RVPtr mass, RVPtr xMax, RVPtr yMax,
-                        RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration){
-  
-  
-  uint g = (uint) get_global_id(0);
-  uint l = (uint) get_local_id(0);
-  uint group = (uint) get_group_id(0);
-  event_t e[1];
+__kernel void bitonicMortonSort(RVPtr x, RVPtr y, RVPtr z,
+    RVPtr vx, RVPtr vy, RVPtr vz,
+    RVPtr ax, RVPtr ay, RVPtr az,
+    RVPtr mass, RVPtr xMax, RVPtr yMax,
+    RVPtr zMax, RVPtr xMin, RVPtr yMin,
+    RVPtr zMin, UVPtr mCodes_G, UVPtr iteration, int inc, int len){
 
-  //Create local variables and copy global data into them:
-  __local uint mCodes_L[WARPSIZE];
-  __local uint mCodes_Sorted[WARPSIZE];
-  e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
-  wait_group_events(1, e);
-  int iter = (int)log2((real)WARPSIZE);
-  // int iter = 5;
-  for(int i = 1; i <= iter; ++i){
-    for(int j = i; j > 0; --j){
-      int groupSize = 1 << j;
-      if(l % groupSize == 0){
-        // mCodes_L[l] = groupSize/2;
-        for(int k = 0; k < groupSize/2; ++k){
-        //Bitonic shuffle:
-            uint temp = mCodes_L[l + k];
-            if(mCodes_L[l + k] > mCodes_L[l + groupSize - k - 1]){
-              mCodes_L[l + k] = mCodes_L[l + groupSize - k - 1];
-              mCodes_L[l + groupSize - k - 1] = temp;
-            }
-        }
-      }
-      barrier(CLK_LOCAL_MEM_FENCE);
-      if(l % groupSize == 0){
-        for(int k = 0; k < groupSize/2; ++k){
-          uint temp = mCodes_L[l + k];
-          if(mCodes_L[l + k] > mCodes_L[l + k + groupSize/2]){
-            mCodes_L[l + k] = mCodes_L[l + k + groupSize/2];
-            mCodes_L[l + k + groupSize/2] = temp;
-          }
-        }
-      }
-      barrier(CLK_LOCAL_MEM_FENCE);
+
+    uint g = (uint) get_global_id(0);
+    int j = g ^ inc;
+    event_t e[1];
+
+    //Create local variables and copy global data into them:
+
+    uint iData[7] = {mCodes_G[g], x[g], y[g], z[g], vx[g], vy[g], vz[g]};
+    uint iKey = iData[0]; //getKey(iData);
+    uint jData[7] = {mCodes_G[j], x[j], y[j], z[j], vx[j], vy[j], vz[j]};
+    uint jKey = jData[0]; //getKey(jData);
+
+    bool smaller = (jKey < iKey) || (jKey == iKey && j < g);
+    bool swap = smaller ^ (j < g) ^ (((len<<1) & g) != 0);
+    if(swap){
+        mCodes_G[g] = jData[0];
+        x[g] = jData[1];
+        y[g] = jData[2];
+        z[g] = jData[3];
+        vx[g] = jData[4];
+        vy[g] = jData[5];
+        vz[g] = jData[6];
     }
-  }
-
-  e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
-  wait_group_events(1, e);
-
+    else{
+        mCodes_G[g] = iData[0];
+        x[g] = iData[1];
+        y[g] = iData[2];
+        z[g] = iData[3];
+        vx[g] = iData[4];
+        vy[g] = iData[5];
+        vz[g] = iData[6];
+    }
 }
+
+// //This kernel uses a bitonic sorting algorithm to sort each warp's morton codes:
+// __kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
+//     RVPtr vx, RVPtr vy, RVPtr vz,
+//     RVPtr ax, RVPtr ay, RVPtr az,
+//     RVPtr mass, RVPtr xMax, RVPtr yMax,
+//     RVPtr zMax, RVPtr xMin, RVPtr yMin,
+//     RVPtr zMin, UVPtr mCodes_G, UVPtr iteration, int inc, int dir){
+
+
+//     uint g = (uint) get_global_id(0);
+//     uint l = (uint) get_local_id(0);
+//     uint wg = (uint) get_local_size(0);
+//     uint group = (uint) get_group_id(0);
+
+//     int offset = group * wg;
+//     mCodes_G += offset;
+//     event_t e[1];
+
+//     //Create local variables and copy global data into them:
+//     __local uint mCodes_L[WARPSIZE];
+//     __local uint mCodes_Sorted[WARPSIZE];
+//     // e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
+//     // wait_group_events(1, e);
+//     uint iData = mCodes_G[l];
+//     mCodes_L[l] = iData;
+//     barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
+//     for(int length = 1; length < wg; length <<= 1){
+//         bool direction = ((l & (length << 1)) != 0);
+
+//         for(int inc = length; inc > 0; inc >>= 1){
+//             int j = l ^ inc;
+//             uint jData = mCodes_L[j];
+//             uint iKey = iData; //getKey(iData);
+//             uint jKey = jData; //getKey(jData);
+//             bool smaller = (jKey < iKey) || (jKey == iKey && j < l);
+//             bool swap = smaller ^ (j < l) ^ direction;
+//             iData = (swap)?jData:iData;
+//             barrier(CLK_LOCAL_MEM_FENCE);
+//             mCodes_L[l] = iData;
+//             barrier(CLK_LOCAL_MEM_FENCE);
+//         }
+//     }
+//     // e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
+//     // wait_group_events(1, e);
+//     mCodes_G[l] = mCodes_L[l];
+// }
+
+// //This kernel uses a bitonic sorting algorithm to sort each warp's morton codes:
+// __kernel void localMortonSort(RVPtr x, RVPtr y, RVPtr z,
+//                         RVPtr vx, RVPtr vy, RVPtr vz,
+//                         RVPtr ax, RVPtr ay, RVPtr az,
+//                         RVPtr mass, RVPtr xMax, RVPtr yMax,
+//                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
+//                         RVPtr zMin, UVPtr mCodes_G, UVPtr iteration){
+  
+  
+//   uint g = (uint) get_global_id(0);
+//   uint l = (uint) get_local_id(0);
+//   uint group = (uint) get_group_id(0);
+//   event_t e[1];
+
+//   //Create local variables and copy global data into them:
+//   __local uint mCodes_L[WARPSIZE];
+//   __local uint mCodes_Sorted[WARPSIZE];
+//   e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
+//   wait_group_events(1, e);
+//   int iter = (int)log2((real)WARPSIZE);
+//   // int iter = 5;
+//   for(int i = 1; i <= iter; ++i){
+//     for(int j = i; j > 0; --j){
+//       int groupSize = 1 << j;
+//       if(l % groupSize == 0){
+//         // mCodes_L[l] = groupSize/2;
+//         for(int k = 0; k < groupSize/2; ++k){
+//         //Bitonic shuffle:
+//             uint temp = mCodes_L[l + k];
+//             if(mCodes_L[l + k] > mCodes_L[l + groupSize - k - 1]){
+//               mCodes_L[l + k] = mCodes_L[l + groupSize - k - 1];
+//               mCodes_L[l + groupSize - k - 1] = temp;
+//             }
+//         }
+//       }
+//       barrier(CLK_LOCAL_MEM_FENCE);
+//       if(l % groupSize == 0){
+//         for(int k = 0; k < groupSize/2; ++k){
+//           uint temp = mCodes_L[l + k];
+//           if(mCodes_L[l + k] > mCodes_L[l + k + groupSize/2]){
+//             mCodes_L[l + k] = mCodes_L[l + k + groupSize/2];
+//             mCodes_L[l + k + groupSize/2] = temp;
+//           }
+//         }
+//       }
+//       barrier(CLK_LOCAL_MEM_FENCE);
+//     }
+//   }
+
+//   e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
+//   wait_group_events(1, e);
+
+// }
 
 //This kernel merges the sorted warp chunks to produce a finalized sorted array:
 __kernel void globalMortonSort(RVPtr x, RVPtr y, RVPtr z,
@@ -1489,23 +1577,23 @@ __kernel void globalMortonSort(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr zMin, UVPtr mCodes_G, UVPtr iteration){
   
   
-  uint g = (uint) get_global_id(0);
-  uint l = (uint) get_local_id(0);
-  uint group = (uint) get_group_id(0);
+//   uint g = (uint) get_global_id(0);
+//   uint l = (uint) get_local_id(0);
+//   uint group = (uint) get_group_id(0);
 
-  event_t e[1];
+//   event_t e[1];
 
   
-  __local uint mCodes_L[10000];
+//   __local uint mCodes_L[10000];
 
 
-  e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
-  wait_group_events(1, e);
+//   e[0] = async_work_group_copy(mCodes_L, mCodes_G + group * WARPSIZE, WARPSIZE, 0);
+//   wait_group_events(1, e);
 
-  mCodes_L[l] = get_global_size(0);
+//   mCodes_L[l] = get_global_size(0);
   
-  e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
-  wait_group_events(1, e);
+//   e[0] = async_work_group_copy(mCodes_G + group * WARPSIZE, mCodes_L, WARPSIZE, 0);
+//   wait_group_events(1, e);
 
 }
 
@@ -1530,16 +1618,15 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
   pos_local[l].z = (z[g] - zMin[0])/(zMax[0]-zMin[0]);
 
   //CALCULATE MORTON CODE
-  // mCodes_L[l] = encodeLocation(pos_local[l]);
-  mCodes_L[l] = l;
+  mCodes_G[g] = encodeLocation(pos_local[l]);
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
-  if(l == 0){
-    for(int i = 0; i < WARPSIZE; ++i){
-      mCodes_G[group * WARPSIZE + i] = mCodes_L[i];
-    }
-  }
+//   if(l == 0){
+//     for(int i = 0; i < WARPSIZE; ++i){
+//       mCodes_G[group * WARPSIZE + i] = mCodes_L[i];
+//     }
+//   }
 
 
   //Use global thread ID as a LSB identifier to seperate morton code collisions.
