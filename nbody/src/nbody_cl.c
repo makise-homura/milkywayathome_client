@@ -452,7 +452,6 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
         err |= nbSetKernelArguments(k->boundingBox, st->nbb, exact);
         err |= nbSetKernelArguments(k->encodeTree, st->nbb, exact);
         err |= nbSetKernelArguments(k->bitonicMortonSort, st->nbb, exact);
-        err |= nbSetKernelArguments(k->globalMortonSort, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -495,7 +494,6 @@ cl_int nbReleaseKernels(NBodyState* st)
     err |= clReleaseKernel_quiet(kernels->boundingBox);
     err |= clReleaseKernel_quiet(kernels->encodeTree);
     err |= clReleaseKernel_quiet(kernels->bitonicMortonSort);
-    err |= clReleaseKernel_quiet(kernels->globalMortonSort);
 //     err |= clReleaseKernel_quiet(kernels->buildTreeClear);
 //     err |= clReleaseKernel_quiet(kernels->buildTree);
 //     err |= clReleaseKernel_quiet(kernels->summarizationClear);
@@ -694,7 +692,6 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->boundingBox = mwCreateKernel(program, "boundingBox");
     kernels->encodeTree = mwCreateKernel(program, "encodeTree");
     kernels->bitonicMortonSort = mwCreateKernel(program, "bitonicMortonSort");
-    kernels->globalMortonSort = mwCreateKernel(program, "globalMortonSort");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
 //     kernels->summarizationClear = mwCreateKernel(program, "summarizationClear");
@@ -1549,9 +1546,7 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = ceil(log(st->effNBody)/log(local[0]));
-    printf("EFFNBODY: %d\n", st->effNBody);
-    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
-    printf("ITERATIONS REQUIRED: %d\n", iterations);
+    printf("ITERATIONS: %d\n", iterations);
     
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
@@ -1560,6 +1555,9 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
                                     0, NULL, &ev);
         if (err != CL_SUCCESS)
         return err;
+        err = clEnqueueBarrier(ci->queue);
+        if (err != CL_SUCCESS)
+            return err;
     }
 
     clFinish(ci->queue);    
@@ -1586,12 +1584,12 @@ static cl_int nbBitonicMortonSort(NBodyState* st, cl_bool updateState)
 
     
     bitonicMortonSort = kernels->bitonicMortonSort;
-    global[0] = st->effNBody;
-    local[0] = ws->local[0];
-    int iterations = 1;
-    // printf("EFFNBODY: %d\n", st->effNBody);
-    // printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
-    // printf("ITERATIONS REQUIRED: %d\n", iterations);
+    global[0] = st->effNBody/2;
+    local[0] = ws->local[0]/2;
+    // local[0] = (global[0] % local[0] == 0)?ws->local[0]:ws->local[0]/2;
+    printf("EFFNBODY: %d\n", st->effNBody);
+    printf("GLOBAL WORKGROUP SIZE: %d\n", global[0]);
+    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
     
     cl_event ev;
 
@@ -1613,49 +1611,6 @@ static cl_int nbBitonicMortonSort(NBodyState* st, cl_bool updateState)
                 return err;
         }
     }
-    clFinish(ci->queue);    
-    return CL_SUCCESS;
-}
-
-
-static cl_int nbGlobalMortonSort(NBodyState* st, cl_bool updateState)
-{
-    cl_int err;
-    size_t chunk;
-    size_t nChunk;
-    cl_int upperBound;
-    size_t global[1];
-    size_t local[1];
-    size_t offset[1];
-    cl_event mortonEv;
-    cl_kernel globalMortonSort;
-    CLInfo* ci = st->ci;
-    NBodyKernels* kernels = st->kernels;
-    NBodyWorkSizes* ws = st->workSizes;
-    cl_int effNBody = st->effNBody;
-
-
-    
-    globalMortonSort = kernels->globalMortonSort;
-    global[0] = st->effNBody/(ws->local[0] * 2);
-    local[0] = 1;
-    // int iterations = 1;
-    int iterations = ceil(log(global[0])/log(2));
-    printf("==========GLOBAL MORTON SORT=============\n");
-    printf("EFFNBODY: %d\n", st->effNBody);
-    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
-    printf("ITERATIONS REQUIRED: %d\n", iterations + 1);
-    printf("INITIAL GLOBAL RANGE: %d\n", global[0]);
-    printf("=========================================\n");
-    cl_event ev;
-    for(int i = 0; i < iterations; ++i){
-        err = clEnqueueNDRangeKernel(ci->queue, globalMortonSort, 1,
-                                    0, global, local,
-                                    0, NULL, &ev);
-        if (err != CL_SUCCESS)
-        return err;
-    }
-
     clFinish(ci->queue);    
     return CL_SUCCESS;
 }
@@ -1908,7 +1863,12 @@ cl_int nbFindEffectiveNBody(const NBodyWorkSizes* workSizes, cl_bool exact, cl_i
     {
         /* Maybe tree construction will need this later */
         // return mwNextMultiple((cl_int) workSizes->local[7], nbody);
-        return mwNextMultiple((cl_int) workSizes->local[0], nbody);
+        int i = 1;
+        while(i < nbody){
+            i<<=1;  
+        }
+        return i;
+        // return mwNextMultiple((cl_int) (workSizes->local[0]), nbody);
     }
 }
 
@@ -2825,13 +2785,6 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         mwPerrorCL(err, "Error executing local morton sorting kernel");
         return NBODY_CL_ERROR;
     }
-
-    err = nbGlobalMortonSort(st, CL_TRUE);
-    if(err != CL_SUCCESS){
-        mwPerrorCL(err, "Error executing global morton sorting kernel");
-        return NBODY_CL_ERROR;
-    }
-
     gettimeofday(&end[2], NULL);
     readGPUBuffers(st, &gData);
     
@@ -2850,20 +2803,20 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
 
     printf("----------------------------\n");
     printf("TREE CONSTRUCTION:\n");
-    // printf("MORTON CODES:\n");
-    // printf("- - - - - - - - - - - - - - \n");
-    // for(int i = 0; i < st->effNBody; ++i){
-    //     printf("%d\n", gData.mCodes[i]);
-    //     // if(gData.mCodes[i] > 0){
-    //     //     for(int j = i + 1; j < st->effNBody; ++j){
-    //     //         if(gData.mCodes[i] == gData.mCodes[j]){
-    //     //             printf("%d\n", gData.mCodes[i]);                    
-    //     //         }
-    //     //     }
-    //     // }
-    // }
-    // printf("----------------------------\n");
-    // fflush(NULL);
+    printf("MORTON CODES:\n");
+    printf("- - - - - - - - - - - - - - \n");
+    for(int i = 0; i < st->effNBody; ++i){
+        printf("%d\n", gData.mCodes[i]);
+        // if(gData.mCodes[i] > 0){
+        //     for(int j = i + 1; j < st->effNBody; ++j){
+        //         if(gData.mCodes[i] == gData.mCodes[j]){
+        //             printf("%d\n", gData.mCodes[i]);                    
+        //         }
+        //     }
+        // }
+    }
+    printf("----------------------------\n");
+    fflush(NULL);
 
     // real startT, endT;
     // startT = (real)start.tv_sec + (1.0/1000000) * start.tv_usec;
