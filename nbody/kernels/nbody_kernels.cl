@@ -1505,3 +1505,15 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
 
   //Use global thread ID as a LSB identifier to seperate morton code collisions.
 }
+
+__kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
+                            RVPtr vx, RVPtr vy, RVPtr vz,
+                            RVPtr ax, RVPtr ay, RVPtr az,
+                            RVPtr mass, RVPtr xMax, RVPtr yMax,
+                            RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                            RVPtr zMin, UVPtr mCodes_G, UVPtr iteration){
+
+    uint g = (uint) get_global_id(0);
+    uint l = (uint) get_local_id(0);
+    uint group = (uint) get_group_id(0);
+}

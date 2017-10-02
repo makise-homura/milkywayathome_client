@@ -452,6 +452,7 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
         err |= nbSetKernelArguments(k->boundingBox, st->nbb, exact);
         err |= nbSetKernelArguments(k->encodeTree, st->nbb, exact);
         err |= nbSetKernelArguments(k->bitonicMortonSort, st->nbb, exact);
+        err |= nbSetKernelArguments(k->constructTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -692,6 +693,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->boundingBox = mwCreateKernel(program, "boundingBox");
     kernels->encodeTree = mwCreateKernel(program, "encodeTree");
     kernels->bitonicMortonSort = mwCreateKernel(program, "bitonicMortonSort");
+    kernels->constructTree = mwCreateKernel(program, "constructTree");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
 //     kernels->summarizationClear = mwCreateKernel(program, "summarizationClear");
@@ -706,6 +708,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     // kernels->outputData = mwCreateKernel(program, "outputData");
     return(     kernels->boundingBox
             &&  kernels->encodeTree
+            &&  kernels->constructTree
             &&  kernels->forceCalculation
             &&  kernels->forceCalculationExact
             &&  kernels->advanceHalfVelocity
@@ -1638,13 +1641,48 @@ static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
     local[0] = ws->local[0];
     int iterations = ceil(log(st->effNBody)/log(local[0]));
     
+    printf("BEGINNING TREE ENCODING\n");
+    cl_event ev;
+    err = clEnqueueNDRangeKernel(ci->queue, encodeTree, 1,
+                                0, global, local,
+                                0, NULL, &ev);
+    if (err != CL_SUCCESS)
+        return err;
+
+    clFinish(ci->queue);
+    printf("COMPLETED TREE ENCODING\n");
+    return CL_SUCCESS;
+}
+
+static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
+{
+    cl_int err;
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event encodeEv;
+    cl_kernel encodeTree;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+
+    
+    encodeTree = kernels->constructTree;
+    global[0] = st->effNBody;
+    local[0] = ws->local[0];
+    
     printf("BEGINNING TREE CONSTRUCTION\n");
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, encodeTree, 1,
                                 0, global, local,
                                 0, NULL, &ev);
     if (err != CL_SUCCESS)
-    return err;
+        return err;
 
     clFinish(ci->queue);
     printf("COMPLETED TREE CONSTRUCTION\n");
@@ -2755,7 +2793,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     int n = st->effNBody;
 
     //BEGIN TIMING
-    struct timeval start[3], end[3];
+    struct timeval start[4], end[4];
     // sleep(1);
     writeGPUBuffers(st, &gData);
 
@@ -2786,6 +2824,15 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         return NBODY_CL_ERROR;
     }
     gettimeofday(&end[2], NULL);
+
+    gettimeofday(&start[3], NULL);
+    err = nbConstructTree(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing local morton sorting kernel");
+        return NBODY_CL_ERROR;
+    }
+    gettimeofday(&end[3], NULL);
+
     readGPUBuffers(st, &gData);
     
 
@@ -2840,6 +2887,13 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("MORTON CODE SORT EXECUTION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
     printf("%.4f ms\n", (((real)end[2].tv_sec + (real)end[2].tv_usec * (1.0/1000000)) - ((real)start[2].tv_sec + (real)start[2].tv_usec * (1.0/1000000))) * 1000);
+    printf("==============================\n");
+    fflush(NULL);
+
+    printf("==============================\n");
+    printf("TREE CONSTRUCTION EXECUTION TIME:\n");
+    // printf("%.4f ms\n", (endT - startT) * 1000);
+    printf("%.4f ms\n", (((real)end[3].tv_sec + (real)end[3].tv_usec * (1.0/1000000)) - ((real)start[3].tv_sec + (real)start[3].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
 
