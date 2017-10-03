@@ -234,6 +234,26 @@ typedef __global real* restrict RVPtr;
 typedef __global volatile int* restrict IVPtr;
 typedef __global uint* restrict UVPtr;
 
+struct node;
+typedef __global struct node* restrict NVPtr;
+
+typedef struct
+{
+    struct node* parent;
+    struct node* children[8];
+
+    struct node* next;
+    struct node* more;
+
+    RVPtr x;
+    RVPtr y;
+    RVPtr z;
+    RVPtr vx;
+    RVPtr vy;
+    RVPtr vz;
+    RVPtr mass;
+
+}node;
 
 
 inline real4 sphericalAccel(real4 pos, real r)
@@ -1511,9 +1531,11 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
                             RVPtr ax, RVPtr ay, RVPtr az,
                             RVPtr mass, RVPtr xMax, RVPtr yMax,
                             RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                            RVPtr zMin, UVPtr mCodes_G, UVPtr iteration){
+                            RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
+                            NVPtr gpuTree){
 
     uint g = (uint) get_global_id(0);
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
+    
 }

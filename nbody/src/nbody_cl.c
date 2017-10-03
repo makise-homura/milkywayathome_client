@@ -845,113 +845,6 @@ static cl_int printBuffer(CLInfo* ci, cl_mem mem, size_t n, const char* name, in
     return clEnqueueUnmapMemObject(ci->queue, mem, p, 0, NULL, NULL);
 }
 
-//NOTE: NOT NEEDED
-// static void stdDebugPrint(NBodyState* st, cl_bool children, cl_bool tree, cl_bool quads)
-// {
-//     cl_int err;
-//     CLInfo* ci = st->ci;
-//     NBodyBuffers* nbb = st->nbb;
-//     cl_uint nNode = nbFindNNode(&ci->di, st->effNBody);
-// 
-//     if (children)
-//     {
-//         mw_printf("--------------------------------------------------------------------------------\n");
-// 
-//         mw_printf("BEGIN CHILD\n");
-//         printBuffer(ci, nbb->child, NSUB * (nNode + 1), "child", 1);
-//         mw_printf("END CHILD\n");
-// 
-//         mw_printf("BEGIN START\n");
-//         printBuffer(ci, nbb->start, nNode + 1, "start", 1);
-//         mw_printf("END START\n");
-// 
-//         mw_printf("BEGIN MASS\n");
-//         printBuffer(ci, nbb->masses, nNode + 1, "mass", 0);
-//         mw_printf("END MASS\n");
-// 
-//         mw_printf("BEGIN POSX\n");
-//         printBuffer(ci, nbb->pos[0], nNode + 1, "posX", 0);
-//         mw_printf("END POSX\n");
-// 
-//         mw_printf("BEGIN POSY\n");
-//         printBuffer(ci, nbb->pos[1], nNode + 1, "posY", 0);
-//         mw_printf("END POSY\n");
-// 
-//         mw_printf("BEGIN POSZ\n");
-//         printBuffer(ci, nbb->pos[2], nNode + 1, "posZ", 0);
-//         mw_printf("END POSZ\n");
-// 
-//         mw_printf("BEGIN VELX\n");
-//         printBuffer(ci, nbb->vel[0], st->effNBody, "velX", 0);
-//         mw_printf("END VELX\n");
-// 
-//         mw_printf("BEGIN VELY\n");
-//         printBuffer(ci, nbb->vel[1], st->effNBody, "velY", 0);
-//         mw_printf("END VELY\n");
-// 
-//         mw_printf("BEGIN VELZ\n");
-//         printBuffer(ci, nbb->vel[2], st->effNBody, "velZ", 0);
-//         mw_printf("END VELZ\n");
-// 
-//         mw_printf("BEGIN ACCX\n");
-//         printBuffer(ci, nbb->acc[0], st->effNBody, "accX", 0);
-//         mw_printf("END ACCX\n");
-// 
-//         mw_printf("BEGIN ACCY\n");
-//         printBuffer(ci, nbb->acc[1], st->effNBody, "accY", 0);
-//         mw_printf("END ACCY\n");
-// 
-//         mw_printf("BEGIN ACCZ\n");
-//         printBuffer(ci, nbb->acc[2], st->effNBody, "accZ", 0);
-//         mw_printf("END ACCZ\n");
-//     }
-// 
-//     if (quads)
-//     {
-//         mw_printf("BEGIN QUAD.XX\n");
-//         printBuffer(ci, nbb->quad.xx, nNode + 1, "quad.xx", 0);
-//         mw_printf("END QUAD.XX\n");
-// 
-//         mw_printf("BEGIN QUAD.XY\n");
-//         printBuffer(ci, nbb->quad.xy, nNode + 1, "quad.xy", 0);
-//         mw_printf("END QUAD.XY\n");
-// 
-//         mw_printf("BEGIN QUAD.XZ\n");
-//         printBuffer(ci, nbb->quad.xz, nNode + 1, "quad.xz", 0);
-//         mw_printf("ENDQUAD.XZ\n");
-// 
-//         mw_printf("BEGIN QUAD.YY\n");
-//         printBuffer(ci, nbb->quad.yy, nNode + 1, "quad.yy", 0);
-//         mw_printf("END QUAD.YY\n");
-// 
-//         mw_printf("BEGIN QUAD.YZ\n");
-//         printBuffer(ci, nbb->quad.yz, nNode + 1, "quad.yz", 0);
-//         mw_printf("END QUAD.YZ\n");
-// 
-//         mw_printf("BEGIN QUAD.ZZ\n");
-//         printBuffer(ci, nbb->quad.zz, nNode + 1, "quad.zz", 0);
-//         mw_printf("END QUAD.ZZ\n");
-//     }
-// 
-// 
-//     if (tree)
-//     {
-//         TreeStatus ts;
-//         memset(&ts, 0, sizeof(ts));
-//         err = nbEnqueueReadTreeStatus(&ts, ci, nbb, CL_TRUE);
-//         if (err != CL_SUCCESS)
-//         {
-//             mwPerrorCL(err, "Reading tree status failed\n");
-//         }
-//         else
-//         {
-//             nbPrintTreeStatus(&ts);
-//             nbPrintDebug(&ts);
-//         }
-//     }
-// 
-//     mw_printf("--------------------------------------------------------------------------------\n");
-// }
 
 //NOTE: UPDATE ERRORS
 // static NBodyStatus nbKernelErrorToNBodyStatus(NBodyKernelError x)
@@ -1120,288 +1013,6 @@ int nbDisplayUpdateMarshalBodies(NBodyState* st, mwvector* cmPosOut)
 
     return 0;
 }
-
-//NOTE: NOT NEEDED
-// static void nbReportProgressWithTimings(const NBodyCtx* ctx, const NBodyState* st)
-// {
-//     double frac = (double) st->step / (double) ctx->nStep;
-// 
-//     mw_fraction_done(frac);
-// 
-//     if (st->reportProgress)
-//     {
-//         NBodyWorkSizes* ws = st->workSizes;
-// 
-//         mw_mvprintw(0, 0,
-//                     "Step %d (%f%%):\n"
-//                     "  boundingBox:      %15f ms\n"
-//                     "  buildTree:        %15f ms%15f ms\n"
-//                     "  summarization:    %15f ms\n"
-//                     "  sort:             %15f ms\n"
-//                     "  quad moments:     %15f ms\n"
-//                     "  forceCalculation: %15f ms%15f ms\n"
-//                     "  integration:      %15f ms\n"
-//                     "\n",
-//                     st->step,
-//                     100.0 * frac,
-//                     ws->timings[0],
-//                     ws->timings[1], ws->chunkTimings[1],
-//                     ws->timings[2],
-//                     ws->timings[3],
-//                     ws->timings[4],
-//                     ws->timings[5], ws->chunkTimings[5],
-//                     ws->timings[6]
-//             );
-//         mw_refresh();
-//     }
-// }
-
-/* Run kernels used only by tree versions. */
-//NOTE: NOT NEEDED
-// static cl_int nbExecuteTreeConstruction(NBodyState* st)
-// {
-//     cl_int err = CL_SUCCESS;
-//     TreeStatus treeStatus;
-//     CLInfo* ci = st->ci;
-//     NBodyBuffers* nbb = st->nbb;
-//     NBodyWorkSizes* ws = st->workSizes;
-//     NBodyKernels* kernels = st->kernels;
-//     cl_uint depth;
-//     cl_uint buildIterations = 0;
-//     cl_event buildTreeClearEv = NULL;
-//     cl_event summarizationClearEv = NULL;
-//     cl_event boxEv = NULL;
-//     cl_event sortEvs[NB_MAX_MAX_DEPTH];
-//     cl_event sumEvs[NB_MAX_MAX_DEPTH];
-//     cl_event quadEvs[NB_MAX_MAX_DEPTH];
-// 
-//     treeStatus.maxDepth = 0;
-//     memset(sortEvs, 0, sizeof(sortEvs));
-//     memset(sumEvs, 0, sizeof(sumEvs));
-//     memset(quadEvs, 0, sizeof(quadEvs));
-// 
-//     err = clEnqueueNDRangeKernel(ci->queue, kernels->boundingBox, 1,
-//                                  NULL, &ws->global[0], &ws->local[0],
-//                                  0, NULL, &boxEv);
-//     if (err != CL_SUCCESS)
-//         goto tree_build_exit;
-// 
-//     /* FIXME: Work sizes */
-//     err = clEnqueueNDRangeKernel(ci->queue, kernels->buildTreeClear, 1,
-//                                  NULL, &ws->global[6], &ws->local[6],
-//                                  0, NULL, &buildTreeClearEv);
-//     if (err != CL_SUCCESS)
-//         goto tree_build_exit;
-// 
-//     if (st->usesConsistentMemory)
-//     {
-//         size_t chunk;
-//         size_t offset[1];
-//         cl_event ev;
-//         cl_event readEv;
-// 
-//         size_t nChunk = st->ignoreResponsive ? 1 : mwDivRoundup((size_t) st->effNBody, ws->global[1]);
-//         cl_uint upperBound = st->ignoreResponsive ? st->effNBody : (cl_int) ws->global[1];
-// 
-//         for (chunk = 0, offset[0] = 0; chunk < nChunk; ++chunk, offset[0] += ws->global[1])
-//         {
-//             if (upperBound > (cl_uint) st->effNBody)
-//                 upperBound = st->effNBody;
-// 
-//             err = clSetKernelArg(kernels->buildTree, 28, sizeof(cl_int), &upperBound);
-//             if (err != CL_SUCCESS)
-//                 goto tree_build_exit;
-// 
-//             err = clEnqueueNDRangeKernel(ci->queue, kernels->buildTree, 1,
-//                                          offset, &ws->global[1], &ws->local[1],
-//                                          0, NULL, &ev);
-//             if (err != CL_SUCCESS)
-//                 goto tree_build_exit;
-// 
-//             err = clEnqueueReadBuffer(ci->queue,
-//                                       nbb->treeStatus,
-//                                       CL_TRUE,
-//                                       0, sizeof(treeStatus), &treeStatus,
-//                                       0, NULL, &readEv);
-// 
-//             if (err != CL_SUCCESS)
-//             {
-//                 clReleaseEvent(readEv);
-//                 goto tree_build_exit;
-//             }
-// 
-//             upperBound += (cl_int) ws->global[1];
-//             ws->timings[1] += waitReleaseEventWithTime(ev);
-//         }
-//     }
-//     else
-//     {
-//         cl_uint lastCounts[3] = { 0, 0, 0 };
-//         cl_uint lasti = 0;
-// 
-//         /* Repeat the tree construction kernel until all bodies have been successfully inserted */
-//         do
-//         {
-//             cl_event ev;
-//             cl_event readEv;
-// 
-//             /*
-//               TODO: We can save somewhat on launch overhead and extra
-//               reads by enqueuing a number of iterations based on a running
-//               average of how many it has taken
-//             */
-// 
-//             err = clEnqueueNDRangeKernel(ci->queue, kernels->buildTree, 1,
-//                                          NULL, &ws->global[1], &ws->local[1],
-//                                          0, NULL, &ev);
-//             if (err != CL_SUCCESS)
-//                 goto tree_build_exit;
-// 
-//             err = clFlush(ci->queue);
-//             if (err != CL_SUCCESS)
-//             {
-//                 clReleaseEvent(ev);
-//                 goto tree_build_exit;
-//             }
-// 
-//             err = clEnqueueReadBuffer(ci->queue,
-//                                       nbb->treeStatus,
-//                                       CL_TRUE,
-//                                       0, sizeof(treeStatus), &treeStatus,
-//                                       0, NULL, &readEv);
-//             if (err != CL_SUCCESS)
-//             {
-//                 clReleaseEvent(readEv);
-//                 goto tree_build_exit;
-//             }
-// 
-//             ws->timings[1] += mwReleaseEventWithTimingMS(ev);
-//             ws->timings[1] += mwReleaseEventWithTimingMS(readEv);
-// 
-//             if (treeStatus.maxDepth > st->maxDepth)
-//             {
-//                 mw_printf("Overflow during tree construction (%u > %u)\n",
-//                           treeStatus.maxDepth, st->maxDepth
-//                     );
-//                 err = MW_CL_ERROR;
-//                 goto tree_build_exit;
-//             }
-// 
-//             lastCounts[(lasti++) % 3] = treeStatus.doneCnt;
-//             if ((lastCounts[0] == lastCounts[1]) && (lastCounts[1] == lastCounts[2]))
-//             {
-//                 mw_printf("Tree construction iterations not progressing: stuck at %u / %u\n",
-//                           treeStatus.doneCnt,
-//                           st->effNBody
-//                     );
-//                 err = MW_CL_ERROR;
-//                 goto tree_build_exit;
-//             }
-// 
-//             ++buildIterations;
-//         }
-//         while (treeStatus.doneCnt != st->effNBody);
-//     }
-// 
-//     /* FIXME: Work sizes */
-//     err = clEnqueueNDRangeKernel(ci->queue, kernels->summarizationClear, 1,
-//                                  NULL, &ws->global[6], &ws->local[6],
-//                                  0, NULL, &summarizationClearEv);
-//     if (err != CL_SUCCESS)
-//         goto tree_build_exit;
-// 
-//     if (st->usesConsistentMemory)
-//     {
-//         err = clEnqueueNDRangeKernel(ci->queue, kernels->summarization, 1,
-//                                      NULL, &ws->global[2], &ws->local[2],
-//                                      0, NULL, &sumEvs[0]);
-//         if (err != CL_SUCCESS)
-//             goto tree_build_exit;
-//     }
-//     else
-//     {
-//         for (depth = 0; depth < treeStatus.maxDepth; ++depth)
-//         {
-//             err = clEnqueueNDRangeKernel(ci->queue, kernels->summarization, 1,
-//                                          NULL, &ws->global[2], &ws->local[2],
-//                                          0, NULL, &sumEvs[depth]);
-//             err |= clFlush(ci->queue);
-//             if (err != CL_SUCCESS)
-//                 goto tree_build_exit;
-//         }
-//     }
-// 
-//     /* Run the sort kernel as many times as will be necessary in the worst case.
-//        FIXME: This is horribly inefficient. The sort kernel needs to
-//        be redesigned, but this is the minimum effort to make this always correct.
-//      */
-//     for (depth = 0; depth < treeStatus.maxDepth; ++depth)
-//     {
-//         err = clEnqueueNDRangeKernel(ci->queue, kernels->sort, 1,
-//                                      NULL, &ws->global[3], &ws->local[3],
-//                                      0, NULL, &sortEvs[depth]);
-//         if (err != CL_SUCCESS)
-//             goto tree_build_exit;
-//     }
-// 
-//     if (st->usesQuad)
-//     {
-//         if (st->usesConsistentMemory)
-//         {
-//             err = clEnqueueNDRangeKernel(ci->queue, kernels->quadMoments, 1,
-//                                          NULL, &ws->global[4], &ws->local[4],
-//                                          0, NULL, &quadEvs[0]);
-//             if (err != CL_SUCCESS)
-//                 goto tree_build_exit;
-//         }
-//         else
-//         {
-//             for (depth = 0; depth < treeStatus.maxDepth; ++depth)
-//             {
-//                 err = clEnqueueNDRangeKernel(ci->queue, kernels->quadMoments, 1,
-//                                              NULL, &ws->global[4], &ws->local[4],
-//                                              0, NULL, &quadEvs[depth]);
-//                 err |= clFlush(ci->queue);
-//                 if (err != CL_SUCCESS)
-//                     goto tree_build_exit;
-//             }
-//         }
-//     }
-// 
-//     err = clFinish(ci->queue);
-//     if (err != CL_SUCCESS)
-//         goto tree_build_exit;
-// 
-// 
-// tree_build_exit:
-//     ws->timings[0] += mwReleaseEventWithTiming(boxEv);
-//     ws->chunkTimings[1] = ws->timings[1] / (double) buildIterations;
-// 
-//     ws->timings[1] += mwReleaseEventWithTiming(buildTreeClearEv);
-//     ws->timings[2] += mwReleaseEventWithTiming(summarizationClearEv);
-// 
-//     {
-//         for (depth = 0; depth < treeStatus.maxDepth; ++depth)
-//         {
-//             ws->timings[3] += mwReleaseEventWithTimingMS(sortEvs[depth]);
-//         }
-//     }
-// 
-//     {
-//         cl_uint maxDepth = st->usesConsistentMemory ? 1 : treeStatus.maxDepth;
-// 
-//         for (depth = 0; depth < maxDepth; ++depth)
-//         {
-//             ws->timings[2] += mwReleaseEventWithTimingMS(sumEvs[depth]);
-//             if (st->usesQuad)
-//             {
-//                 ws->timings[4] += mwReleaseEventWithTimingMS(quadEvs[depth]);
-//             }
-//         }
-//     }
-// 
-//     return err;
-// }
 
 /* Run force calculation and integration kernels */
 //NOTE: NOT NEEDED
@@ -1664,7 +1275,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     size_t local[1];
     size_t offset[1];
     cl_event encodeEv;
-    cl_kernel encodeTree;
+    cl_kernel constructTree;
     CLInfo* ci = st->ci;
     NBodyKernels* kernels = st->kernels;
     NBodyWorkSizes* ws = st->workSizes;
@@ -1672,13 +1283,14 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
 
     
-    encodeTree = kernels->constructTree;
+    constructTree = kernels->constructTree;
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     
     printf("BEGINNING TREE CONSTRUCTION\n");
     cl_event ev;
-    err = clEnqueueNDRangeKernel(ci->queue, encodeTree, 1,
+    err = clSetKernelArg(kernels->constructTree, 18, sizeof(gpuNode*), &(st->nbb->gpuTree));
+    err = clEnqueueNDRangeKernel(ci->queue, constructTree, 1,
                                 0, global, local,
                                 0, NULL, &ev);
     if (err != CL_SUCCESS)
@@ -1931,10 +1543,12 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
     if(!st->usesExact){
         st->nbb->mCodes = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->iteration = mwCreateZeroReadWriteBuffer(ci, sizeof(uint32_t));
+        st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
         for(int i = 0; i < 3; ++i){
             st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
             st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
         }
+        st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
     }
 
     // st->nbb->input = clCreateBuffer(st->ci->clctx, CL_MEM_READ_ONLY, buffSize*sizeof(gpuTree), NULL, NULL);
@@ -2405,144 +2019,144 @@ static cl_int nbDebugSummarization(const NBodyCtx* ctx, NBodyState* st)
     return CL_SUCCESS;
 }
 
-void fillGPUTreeOnlyBodies(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT)
-{
-  for(int i = 0; i < st->effNBody; ++i){
-    if(i < st->nbody){
-      gpT[i].isBody = 1;
-      gpT[i].pos[0] = st->bodytab[i].bodynode.pos.x;
-      gpT[i].pos[1] = st->bodytab[i].bodynode.pos.y;
-      gpT[i].pos[2] = st->bodytab[i].bodynode.pos.z;
-      gpT[i].bodyID = st->bodytab[i].bodynode.bodyID;
-      gpT[i].mass = st->bodytab[i].bodynode.mass;
-      gpT[i].vel[0] = st->bodytab[i].vel.x;
-      gpT[i].vel[1] = st->bodytab[i].vel.y;
-      gpT[i].vel[2] = st->bodytab[i].vel.z;
-      gpT[i].acc[0] = 0;
-      gpT[i].acc[1] = 0;
-      gpT[i].acc[2] = 0;
-    }
-    else{
-      gpT[i].isBody = 0;
-      gpT[i].pos[0] = 0;
-      gpT[i].pos[1] = 0;
-      gpT[i].pos[2] = 0;
-      gpT[i].bodyID = -1;
-      gpT[i].mass = 0;
-      gpT[i].vel[0] = 0;
-      gpT[i].vel[1] = 0;
-      gpT[i].vel[2] = 0;
-      gpT[i].acc[0] = 0;
-      gpT[i].acc[1] = 0;
-      gpT[i].acc[2] = 0;
-    }
-  }
-}
-void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
-    //Create gpu tree array:
-    //Fill TreeArray:
-    const NBodyNode* q = (const NBodyNode*) st->tree.root; /* Start at the root */
-    unsigned int n = 0; //Start at initial index
-    const Body* p = NULL;
-    //printf("%i\n", st->tree.cellUsed);
+// void fillGPUTreeOnlyBodies(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT)
+// {
+//   for(int i = 0; i < st->effNBody; ++i){
+//     if(i < st->nbody){
+//       gpT[i].isBody = 1;
+//       gpT[i].pos[0] = st->bodytab[i].bodynode.pos.x;
+//       gpT[i].pos[1] = st->bodytab[i].bodynode.pos.y;
+//       gpT[i].pos[2] = st->bodytab[i].bodynode.pos.z;
+//       gpT[i].bodyID = st->bodytab[i].bodynode.bodyID;
+//       gpT[i].mass = st->bodytab[i].bodynode.mass;
+//       gpT[i].vel[0] = st->bodytab[i].vel.x;
+//       gpT[i].vel[1] = st->bodytab[i].vel.y;
+//       gpT[i].vel[2] = st->bodytab[i].vel.z;
+//       gpT[i].acc[0] = 0;
+//       gpT[i].acc[1] = 0;
+//       gpT[i].acc[2] = 0;
+//     }
+//     else{
+//       gpT[i].isBody = 0;
+//       gpT[i].pos[0] = 0;
+//       gpT[i].pos[1] = 0;
+//       gpT[i].pos[2] = 0;
+//       gpT[i].bodyID = -1;
+//       gpT[i].mass = 0;
+//       gpT[i].vel[0] = 0;
+//       gpT[i].vel[1] = 0;
+//       gpT[i].vel[2] = 0;
+//       gpT[i].acc[0] = 0;
+//       gpT[i].acc[1] = 0;
+//       gpT[i].acc[2] = 0;
+//     }
+//   }
+// }
+// void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
+//     //Create gpu tree array:
+//     //Fill TreeArray:
+//     const NBodyNode* q = (const NBodyNode*) st->tree.root; /* Start at the root */
+//     unsigned int n = 0; //Start at initial index
+//     const Body* p = NULL;
+//     //printf("%i\n", st->tree.cellUsed);
     
-    while(q != NULL){
-        mwvector pos;
-        pos = Pos(q);
-        gpT[n].pos[0] = pos.x;
-        gpT[n].pos[1] = pos.y;
-        gpT[n].pos[2] = pos.z;
-        gpT[n].mass = q->mass; //Set mass
-        //printf("%f\n", gpT[n].mass);
+//     while(q != NULL){
+//         mwvector pos;
+//         pos = Pos(q);
+//         gpT[n].pos[0] = pos.x;
+//         gpT[n].pos[1] = pos.y;
+//         gpT[n].pos[2] = pos.z;
+//         gpT[n].mass = q->mass; //Set mass
+//         //printf("%f\n", gpT[n].mass);
         
-        if(isBody(q)){ //Check if q is a body
-            p = q;
-            //#ifdef DEBUG
-              gpT[n].bodyID = p->bodynode.bodyID;
+//         if(isBody(q)){ //Check if q is a body
+//             p = q;
+//             //#ifdef DEBUG
+//               gpT[n].bodyID = p->bodynode.bodyID;
               
-            //#endif
-            gpT[n].vel[0] = p->vel.x;
-            gpT[n].vel[1] = p->vel.y;
-            gpT[n].vel[2] = p->vel.z;
-            gpT[n].acc[0] = 0;
-            gpT[n].acc[1] = 0;
-            gpT[n].acc[2] = 0;
-            gpT[n].isBody = 1; //Flag as body
-            gpT[n].more = 0; //Bodies do not have (more) indices.
-            if(Next(q) != NULL){
-                gpT[n].next = n+1; //The next index will be our immediate neighbor
-            }
-            else{
-                gpT[n].next = 0;
-            }
-            q = Next(q); //If we are in a body, we can't go deeper, have to go next
-        }
-        else{   //If q is not a body, it must be a cell
+//             //#endif
+//             gpT[n].vel[0] = p->vel.x;
+//             gpT[n].vel[1] = p->vel.y;
+//             gpT[n].vel[2] = p->vel.z;
+//             gpT[n].acc[0] = 0;
+//             gpT[n].acc[1] = 0;
+//             gpT[n].acc[2] = 0;
+//             gpT[n].isBody = 1; //Flag as body
+//             gpT[n].more = 0; //Bodies do not have (more) indices.
+//             if(Next(q) != NULL){
+//                 gpT[n].next = n+1; //The next index will be our immediate neighbor
+//             }
+//             else{
+//                 gpT[n].next = 0;
+//             }
+//             q = Next(q); //If we are in a body, we can't go deeper, have to go next
+//         }
+//         else{   //If q is not a body, it must be a cell
             
-            gpT[n].isBody = 0; //Flag as not body
-            if(ctx->useQuad){ //If using quad, calculate quad moments
-                gpT[n].quad.xx = Quad(q).xx;
-                gpT[n].quad.xy = Quad(q).xy;
-                gpT[n].quad.xz = Quad(q).xz;
-                gpT[n].quad.yy = Quad(q).yy;
-                gpT[n].quad.yz = Quad(q).yz;
-                gpT[n].quad.zz = Quad(q).zz;
-            }
-            else{ //Otherwise initialize to -1
-                gpT[n].quad.xx = -1;
-                gpT[n].quad.xy = -1;
-                gpT[n].quad.xz = -1;
-                gpT[n].quad.yy = -1;
-                gpT[n].quad.yz = -1;
-                gpT[n].quad.zz = -1;
-            }
+//             gpT[n].isBody = 0; //Flag as not body
+//             if(ctx->useQuad){ //If using quad, calculate quad moments
+//                 gpT[n].quad.xx = Quad(q).xx;
+//                 gpT[n].quad.xy = Quad(q).xy;
+//                 gpT[n].quad.xz = Quad(q).xz;
+//                 gpT[n].quad.yy = Quad(q).yy;
+//                 gpT[n].quad.yz = Quad(q).yz;
+//                 gpT[n].quad.zz = Quad(q).zz;
+//             }
+//             else{ //Otherwise initialize to -1
+//                 gpT[n].quad.xx = -1;
+//                 gpT[n].quad.xy = -1;
+//                 gpT[n].quad.xz = -1;
+//                 gpT[n].quad.yy = -1;
+//                 gpT[n].quad.yz = -1;
+//                 gpT[n].quad.zz = -1;
+//             }
             
-            //Set next index
-            unsigned int numChild = 0;
-            if(Next(q) != NULL){
-                const NBodyNode* w = q; //Start at current cell to find out how many children it has
-                while(w != Next(q) && w != NULL)
-                {
-                    while(!isBody(w)) //Follow tree to bottom
-                    {
-                        ++numChild;
-                        w = More(w);
-                    }
-                    ++numChild;
-                    w  = Next(w); //Traverse tree until we get to Next(q), adding children as we go
-                }
-                gpT[n].next = n + 1 + numChild; //Now we know what the Next() index will be
-            }
-            else{ //If there is no next pointer, we point it back to the root
-                gpT[n].next = 0;
-            }
-            gpT[n].more = n + 1;
-            if(More(q) == NULL){
-                printf("Interesting:\n");
-            }
-            if(gpT[n].more > (st->nbody)){
-                printf("OOPS M8: %i\n", gpT[n].more);
-            }
-            q = More(q); //If we are in a cell, we must go deeper
-        }
+//             //Set next index
+//             unsigned int numChild = 0;
+//             if(Next(q) != NULL){
+//                 const NBodyNode* w = q; //Start at current cell to find out how many children it has
+//                 while(w != Next(q) && w != NULL)
+//                 {
+//                     while(!isBody(w)) //Follow tree to bottom
+//                     {
+//                         ++numChild;
+//                         w = More(w);
+//                     }
+//                     ++numChild;
+//                     w  = Next(w); //Traverse tree until we get to Next(q), adding children as we go
+//                 }
+//                 gpT[n].next = n + 1 + numChild; //Now we know what the Next() index will be
+//             }
+//             else{ //If there is no next pointer, we point it back to the root
+//                 gpT[n].next = 0;
+//             }
+//             gpT[n].more = n + 1;
+//             if(More(q) == NULL){
+//                 printf("Interesting:\n");
+//             }
+//             if(gpT[n].more > (st->nbody)){
+//                 printf("OOPS M8: %i\n", gpT[n].more);
+//             }
+//             q = More(q); //If we are in a cell, we must go deeper
+//         }
         
-        ++n; //Increment our index
-        //printf("%i \n", n);
-    }
-    while(n <  st->effNBody){ //FILL EMPTY GPU TREE SPOTS:
-      gpT[n].mass = 0;
-      gpT[n].bodyID = -1;
-      gpT[n].isBody = 0;
-      gpT[n].vel[0] = 0;
-      gpT[n].vel[1] = 0;
-      gpT[n].vel[2] = 0;
-      gpT[n].acc[0] = 0;
-      gpT[n].acc[1] = 0;
-      gpT[n].acc[2] = 0;
-      gpT[n].more = 0;
-      ++n;
-    }
-}
+//         ++n; //Increment our index
+//         //printf("%i \n", n);
+//     }
+//     while(n <  st->effNBody){ //FILL EMPTY GPU TREE SPOTS:
+//       gpT[n].mass = 0;
+//       gpT[n].bodyID = -1;
+//       gpT[n].isBody = 0;
+//       gpT[n].vel[0] = 0;
+//       gpT[n].vel[1] = 0;
+//       gpT[n].vel[2] = 0;
+//       gpT[n].acc[0] = 0;
+//       gpT[n].acc[1] = 0;
+//       gpT[n].acc[2] = 0;
+//       gpT[n].more = 0;
+//       ++n;
+//     }
+// }
 
 void initGPUDataArrays(NBodyState* st, gpuData* gData){
   int n = st->effNBody;
@@ -2788,6 +2402,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     cl_uint i;
     cl_command_queue q = st->ci->queue;
     gpuData gData;
+    // gpuTree* gTree;
     initGPUDataArrays(st, &gData);
     fillGPUDataOnlyBodies(st, &gData);
     int n = st->effNBody;
@@ -2820,7 +2435,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     gettimeofday(&start[2], NULL);
     err = nbBitonicMortonSort(st, CL_TRUE);
     if(err != CL_SUCCESS){
-        mwPerrorCL(err, "Error executing local morton sorting kernel");
+        mwPerrorCL(err, "Error executing morton sorting kernel");
         return NBODY_CL_ERROR;
     }
     gettimeofday(&end[2], NULL);
@@ -2828,7 +2443,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     gettimeofday(&start[3], NULL);
     err = nbConstructTree(st, CL_TRUE);
     if(err != CL_SUCCESS){
-        mwPerrorCL(err, "Error executing local morton sorting kernel");
+        mwPerrorCL(err, "Error executing tree construction kernel");
         return NBODY_CL_ERROR;
     }
     gettimeofday(&end[3], NULL);
@@ -2905,34 +2520,34 @@ NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
     return NBODY_SUCCESS;
 }
 
-NBodyStatus nbStripBodies(NBodyState* st, gpuTree* gpuData){ //Function to strip bodies out of GPU Tree
-    int n = st->effNBody;
-    int j = 0;
-    int minimumBID = n;
-    for(int i = 0; i < n; ++i){
-        if(gpuData[i].isBody == 1){
-           // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 
-           // gpuData[i].bodyID, gpuData[i].acc[0], gpuData[i].acc[1], gpuData[i].acc[2]);
-          // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n", 
-          // gpuData[i].bodyID, gpuData[i].vel[0], gpuData[i].vel[1], gpuData[i].vel[2]);
-          // printf("BODY ID: %d, POSITION: %f,%f,%f\n", 
-          // gpuData[i].bodyID, gpuData[i].pos[0], gpuData[i].pos[1], gpuData[i].pos[2]);
-          st->bodytab[j].bodynode.pos.x = gpuData[i].pos[0];
-          st->bodytab[j].bodynode.pos.y = gpuData[i].pos[1];
-          st->bodytab[j].bodynode.pos.z = gpuData[i].pos[2];
-          st->bodytab[j].bodynode.bodyID = gpuData[i].bodyID;
-          st->bodytab[j].bodynode.mass = gpuData[i].mass;
-          st->bodytab[j].vel.x = gpuData[i].vel[0];
-          st->bodytab[j].vel.y = gpuData[i].vel[1];
-          st->bodytab[j].vel.z = gpuData[i].vel[2];
-           ++j;
-          if(gpuData[i].bodyID < minimumBID){
-            minimumBID = gpuData[i].bodyID;
-          }
-        }
-    }
-    printf("MinValue: %d\n", minimumBID);
-}
+// NBodyStatus nbStripBodies(NBodyState* st, gpuTree* gpuData){ //Function to strip bodies out of GPU Tree
+//     int n = st->effNBody;
+//     int j = 0;
+//     int minimumBID = n;
+//     for(int i = 0; i < n; ++i){
+//         if(gpuData[i].isBody == 1){
+//            // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 
+//            // gpuData[i].bodyID, gpuData[i].acc[0], gpuData[i].acc[1], gpuData[i].acc[2]);
+//           // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n", 
+//           // gpuData[i].bodyID, gpuData[i].vel[0], gpuData[i].vel[1], gpuData[i].vel[2]);
+//           // printf("BODY ID: %d, POSITION: %f,%f,%f\n", 
+//           // gpuData[i].bodyID, gpuData[i].pos[0], gpuData[i].pos[1], gpuData[i].pos[2]);
+//           st->bodytab[j].bodynode.pos.x = gpuData[i].pos[0];
+//           st->bodytab[j].bodynode.pos.y = gpuData[i].pos[1];
+//           st->bodytab[j].bodynode.pos.z = gpuData[i].pos[2];
+//           st->bodytab[j].bodynode.bodyID = gpuData[i].bodyID;
+//           st->bodytab[j].bodynode.mass = gpuData[i].mass;
+//           st->bodytab[j].vel.x = gpuData[i].vel[0];
+//           st->bodytab[j].vel.y = gpuData[i].vel[1];
+//           st->bodytab[j].vel.z = gpuData[i].vel[2];
+//            ++j;
+//           if(gpuData[i].bodyID < minimumBID){
+//             minimumBID = gpuData[i].bodyID;
+//           }
+//         }
+//     }
+//     printf("MinValue: %d\n", minimumBID);
+// }
 
 NBodyStatus nbStripBodiesSoA(NBodyState* st, gpuData* gData){ //Function to strip bodies out of GPU Tree
   printf("STRIPPING BODIES FROM BUFFER STRUCTURE\n");

@@ -204,6 +204,26 @@ typedef struct MW_ALIGN_TYPE
 //     cl_mem output;  
 // } NBodyBuffers;
 
+struct gpuNode;
+
+typedef struct
+{
+    struct gpuNode* parent;
+    struct gpuNode* children[8];
+
+    struct gpuNode* next;
+    struct gpuNode* more;
+
+    real* x;
+    real* y;
+    real* z;
+    real* vx;
+    real* vy;
+    real* vz;
+    real* mass;
+
+}gpuNode;
+
 typedef struct{
     cl_mem pos[3];
     cl_mem vel[3];
@@ -216,6 +236,8 @@ typedef struct{
 
     cl_mem mCodes;
     cl_mem iteration;
+
+    cl_mem gpuTree;
 
 }NBodyBuffers;
 
@@ -298,28 +320,7 @@ typedef struct
 //////////////////////////////////////////
 //Dynamic GPU Array for calculation data
 //////////////////////////////////////////
-typedef struct
-{
-    real pos[3];
-    real vel[3];
-    real acc[3];
 
-    real mass;
-
-    unsigned int bodyID;
-    unsigned int next;
-    unsigned int more;
-
-    int isBody;
-    struct
-    {
-        real xx, xy, xz;
-        real yy, yz;
-        real zz;
-    }quad;
-    
-   
-}gpuTree;
 
 typedef struct
 {
@@ -337,17 +338,16 @@ typedef struct
 
 }gpuData;
 
-typedef struct
-{
-    gpuTree *data; //Create an array of gpuVec structs to push to GPU
-    unsigned int used;
-    unsigned int size;
-}gpuArray;
+// typedef struct
+// {
+//     // gpuTree *data; //Create an array of gpuVec structs to push to GPU
+//     unsigned int used;
+//     unsigned int size;
+// }gpuArray;
 
-void copyGPUTree(gpuTree* a, gpuTree* b, int n);
-void initGPUArray(gpuArray *a, unsigned int initialSize);
-void insertGPUArray(gpuArray *a, gpuTree element);
-void freeGPUArray(gpuArray *a);
+// void copyGPUTree(gpuTree* a, gpuTree* b, int n);
+// void initGPUArray(gpuArray *a, unsigned int initialSize);
+// void freeGPUArray(gpuArray *a);
 
 
 

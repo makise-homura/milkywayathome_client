@@ -165,26 +165,26 @@ int destroyNBodyState(NBodyState* st)
     return failed;
 }
 
-void copyGPUTree(gpuTree* a, gpuTree* b, int n){
-    for(int j = 0; j < n; ++j){
-        for(int i = 0; i < 3; ++i){
-            a[j].pos[i] = b[j].pos[i];
-            a[j].vel[i] = b[j].vel[i];
-            a[j].acc[i] = b[j].acc[i];
-        }
+// void copyGPUTree(gpuTree* a, gpuTree* b, int n){
+//     for(int j = 0; j < n; ++j){
+//         for(int i = 0; i < 3; ++i){
+//             a[j].pos[i] = b[j].pos[i];
+//             a[j].vel[i] = b[j].vel[i];
+//             a[j].acc[i] = b[j].acc[i];
+//         }
         
-        a[j].mass = b[j].mass;
+//         a[j].mass = b[j].mass;
         
-        a[j].isBody = b[j].isBody;
+//         a[j].isBody = b[j].isBody;
         
-        a[j].quad.xx = b[j].quad.xx;
-        a[j].quad.xy = b[j].quad.xy;
-        a[j].quad.xz = b[j].quad.xz;
-        a[j].quad.yy = b[j].quad.yy;
-        a[j].quad.yz = b[j].quad.yz;
-        a[j].quad.zz = b[j].quad.zz;
-    }
-}
+//         a[j].quad.xx = b[j].quad.xx;
+//         a[j].quad.xy = b[j].quad.xy;
+//         a[j].quad.xz = b[j].quad.xz;
+//         a[j].quad.yy = b[j].quad.yy;
+//         a[j].quad.yz = b[j].quad.yz;
+//         a[j].quad.zz = b[j].quad.zz;
+//     }
+// }
 
 //////////////////////////
 //BEGIN Dynamic GPU Array:
@@ -193,33 +193,23 @@ void copyGPUTree(gpuTree* a, gpuTree* b, int n){
 * is being returned.  This could be causing your segfault if you try to use
 * this array because it was never intialized.
 */
-void initGPUArray(gpuArray *a, unsigned int initialSize) 
-{
-    a->data = (gpuTree*)mwCalloc(initialSize, sizeof(gpuTree));
-    a->used = 0;
-    a->size = initialSize;
-}
-
-void insertGPUArray(gpuArray *a, gpuTree element)
-{
-    if(a->used == a->size)
-    {
-        a->size *= 2;
-        a->data = (gpuTree *)mwRealloc(a->data, (a->size)*sizeof(gpuTree));
-    }
-    (a->data)[++(a->used)] = element;  //increments array used size and put item into array
-}
+// void initGPUArray(gpuArray *a, unsigned int initialSize) 
+// {
+//     a->data = (gpuTree*)mwCalloc(initialSize, sizeof(gpuTree));
+//     a->used = 0;
+//     a->size = initialSize;
+// }
 
 //Need pointer here otherwise you are trying to free stack memory...
-void freeGPUArray(gpuArray *a)
-{
-   if(a->data)  //Always a good idea to check to make sure the array was allocated in the first place
-   {
-       free(a->data);
-       a->data = NULL;
-       a->used = a->size = 0;
-   }
-}
+// void freeGPUArray(gpuArray *a)
+// {
+//    if(a->data)  //Always a good idea to check to make sure the array was allocated in the first place
+//    {
+//        free(a->data);
+//        a->data = NULL;
+//        a->used = a->size = 0;
+//    }
+// }
 //////////////////////////
 //END Dynamic GPU Array
 //////////////////////////
