@@ -1289,7 +1289,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     
     printf("BEGINNING TREE CONSTRUCTION\n");
     cl_event ev;
-    err = clSetKernelArg(kernels->constructTree, 18, sizeof(gpuNode*), &(st->nbb->gpuTree));
+    err = clSetKernelArg(kernels->constructTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clEnqueueNDRangeKernel(ci->queue, constructTree, 1,
                                 0, global, local,
                                 0, NULL, &ev);
