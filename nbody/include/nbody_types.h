@@ -239,6 +239,8 @@ typedef struct{
 
     cl_mem gpuTree;
 
+    cl_mem gpuLeafs;
+
 }NBodyBuffers;
 
 typedef struct

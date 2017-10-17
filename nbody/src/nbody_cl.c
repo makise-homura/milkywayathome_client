@@ -1290,6 +1290,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     printf("BEGINNING TREE CONSTRUCTION\n");
     cl_event ev;
     err = clSetKernelArg(kernels->constructTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
+    err = clSetKernelArg(kernels->constructTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
     err = clEnqueueNDRangeKernel(ci->queue, constructTree, 1,
                                 0, global, local,
                                 0, NULL, &ev);
@@ -1549,6 +1550,7 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
             st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
         }
         st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
+        st->nbb->gpuLeafs = mwCreateZeroReadWriteBuffer(ci, n* sizeof(gpuNode));
     }
 
     // st->nbb->input = clCreateBuffer(st->ci->clctx, CL_MEM_READ_ONLY, buffSize*sizeof(gpuTree), NULL, NULL);

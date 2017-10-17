@@ -1527,25 +1527,147 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
   //Use global thread ID as a LSB identifier to seperate morton code collisions.
 }
 
+
+//Split function available here: https://devblogs.nvidia.com/parallelforall/thinking-parallel-part-iii-tree-construction-gpu/
+inline int findSplit(UVPtr mCodes, int first, int last){
+    uint fCode = mCodes[first];
+    uint lCode = mCodes[last];
+
+    if(fCode == lCode){
+        return first;
+    }
+
+    int prefix = clz(fCode^lCode);
+    int split = first;
+    
+    int step = last - first;
+
+    do{
+        step = (step + 1) >> 1;
+        int newSplit = split + step;
+        
+        if(newSplit < last){
+            uint splitCode = mCodes[newSplit];
+            int splitPrefix = clz(fCode^splitCode);
+            if(splitPrefix > prefix){
+                split = newSplit;
+            }
+        }
+    }while(step > 1);
+    return split;
+}
+
+inline int2 findRange(UVPtr mCodes, int size, int index){
+    int lso = size - 1;
+    if(index ==  0){
+        return (int2)(0, lso);
+    }
+    int dir;
+    int dMin;
+    int initialIndex = index;
+
+    uint minone = mCodes[index - 1];
+    uint precis = mCodes[index];
+    uint pluone = mCodes[index + 1];
+    if((minone == precis && pluone == precis)){
+        while(index > 0 && index < lso){
+            ++index;
+            if(index >=lso){
+                break;
+            }
+            if(mCodes[index] != mCodes[index+1]){
+                break;
+            }
+        }
+        return (int2)(initialIndex, index);
+    }
+    else{
+        int2 lr = (int2)(clz(precis^minone), clz(precis^pluone));
+        if(lr.x > lr.y){
+            dir = -1;
+            dMin = lr.y;
+        }
+        else{
+            dir = 1;
+            dMin = lr.x;
+        }
+    }
+
+    int lMax = 2;
+    int testIndex = index + lMax * dir;
+
+    //Find search range:
+    while((testIndex <= lso && testIndex >= 0)?(clz(precis ^ mCodes[testIndex]) > dMin):(false)){
+        lMax *= 2;
+        testIndex = index + lMax * dir;
+    }
+    int l = 0;
+
+    for(int div = 2; lMax/div >=1; div *=2){
+        int t = lMax/div;
+        int newTest = index + (l + t) * dir;
+
+        if(newTest <= lso && newTest >= 0){
+            int splitPrefix = clz(precis^mCodes[newTest]);
+            if(splitPrefix>dMin){
+                l = l+t;
+            }
+        }
+    }
+
+    if(dir == 1){
+        return (int2)(index, index + l*dir);
+    }
+    else{
+        return (int2)(index + l*dir, index);
+    }
+    
+}
+
 __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
                             RVPtr vx, RVPtr vy, RVPtr vz,
                             RVPtr ax, RVPtr ay, RVPtr az,
                             RVPtr mass, RVPtr xMax, RVPtr yMax,
                             RVPtr zMax, RVPtr xMin, RVPtr yMin,
                             RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
-                            NVPtr gpuTree){
+                            NVPtr gpuTree, NVPtr gpuLeafs){
 
     uint g = (uint) get_global_id(0);
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    //CREATE ALL LEAF NODES:
-    gpuTree[g].mass = &(mass[g]);
-    gpuTree[g].x = &(x[g]);
-    gpuTree[g].y = &(y[g]);
-    gpuTree[g].z = &(z[g]);
-    gpuTree[g].vx = &(vx[g]);
-    gpuTree[g].vy = &(vy[g]);
-    gpuTree[g].vz = &(vz[g]);
+    gpuLeafs[g].mass = &(mass[g]);
+    gpuLeafs[g].x = &(x[g]);
+    gpuLeafs[g].y = &(y[g]);
+    gpuLeafs[g].z = &(z[g]);
+    gpuLeafs[g].vx = &(vx[g]);
+    gpuLeafs[g].vy = &(vy[g]);
+    gpuLeafs[g].vz = &(vz[g]);
 
+    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+
+    int2 range = findRange(mCodes_G, EFFNBODY, g);
+    int split = findSplit(mCodes_G, range.x, range.y);
+
+    __global node* __private chA;
+    __global node* __private chB;
+
+    if(split == range.x){
+        chA = &gpuLeafs[split];   
+    }
+    else{
+        chA = &gpuTree[split];
+    }
+
+    if(split + 1 == range.y){
+        chB = &gpuLeafs[split];
+    }
+    else{
+        chB = &gpuTree[split];
+    }
+    gpuTree[g].children[0] = chA;
+    gpuTree[g].children[1] = chB;
+
+    chA->parent = &gpuTree[g];
+    chB->parent = &gpuTree[g];
 }
