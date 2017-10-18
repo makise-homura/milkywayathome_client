@@ -307,7 +307,12 @@ NBodyStatus nbRunSystemPlain(const NBodyCtx* ctx, NBodyState* st, const NBodyFla
         //  st->bodytab[i].bodynode.bodyID, st->bodytab[i].bodynode.pos.x, st->bodytab[i].bodynode.pos.y, st->bodytab[i].bodynode.pos.z);
         //printf("BODY ID: %d, MASS: %.15f\n",
         // st->bodytab[i].bodynode.bodyID, st->bodytab[i].bodynode.mass);
-
+        /*
+        printf("%.15f\n,%.15f\n,%.15f\n",
+        st->bodytab[i].bodynode.pos.x, st->bodytab[i].bodynode.pos.y, st->bodytab[i].bodynode.pos.z);
+        printf("%.15f\n,%.15f\n,%.15f\n",
+        st->bodytab[i].vel.x, st->bodytab[i].vel.y, st->bodytab[i].vel.z);
+        */
     }
     #ifdef NBODY_BLENDER_OUTPUT
         blenderPrintMisc(st, ctx, startCmPos, perpendicularCmPos);

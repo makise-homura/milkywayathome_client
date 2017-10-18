@@ -1,4 +1,4 @@
-  typedef __global double* restrict RVPtr;
+typedef __global double* restrict RVPtr;
 typedef __global volatile uint* restrict UVPtr;
 #define EPS2 0.002312
 #define WARPSIZE 64
