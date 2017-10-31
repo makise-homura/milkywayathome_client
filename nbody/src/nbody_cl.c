@@ -1284,15 +1284,16 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
     
     constructTree = kernels->constructTree;
-    global[0] = st->effNBody;
+    global[0] = st->effNBody - 1;
     local[0] = ws->local[0];
     
     printf("BEGINNING TREE CONSTRUCTION\n");
     cl_event ev;
     err = clSetKernelArg(kernels->constructTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->constructTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->constructTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err = clEnqueueNDRangeKernel(ci->queue, constructTree, 1,
-                                0, global, local,
+                                0, global, NULL,
                                 0, NULL, &ev);
     if (err != CL_SUCCESS)
         return err;
@@ -1551,6 +1552,7 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
         }
         st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
         st->nbb->gpuLeafs = mwCreateZeroReadWriteBuffer(ci, n* sizeof(gpuNode));
+        st->nbb->nodeCounts = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
     }
 
     // st->nbb->input = clCreateBuffer(st->ci->clctx, CL_MEM_READ_ONLY, buffSize*sizeof(gpuTree), NULL, NULL);
@@ -2173,6 +2175,8 @@ void initGPUDataArrays(NBodyState* st, gpuData* gData){
   }
   gData->mass = calloc(n, sizeof(real));
   gData->mCodes = calloc(n, sizeof(uint32_t));
+  gData->gpuTree = calloc(n, sizeof(gpuNode));
+  gData->nodeCounts = calloc(n, sizeof(uint32_t));
 }
 
 void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
@@ -2317,6 +2321,19 @@ void readGPUBuffers(NBodyState* st, gpuData* gData){
                             0, n*sizeof(uint32_t), gData->mCodes,
                             0, NULL, NULL);
 
+    err |= clEnqueueReadBuffer(st->ci->queue,
+                            st->nbb->gpuTree,
+                            CL_TRUE,
+                            0, n*sizeof(gpuNode), gData->gpuTree,
+                            0, NULL, NULL);
+
+    err |= clEnqueueReadBuffer(st->ci->queue,
+                            st->nbb->nodeCounts,
+                            CL_TRUE,
+                            0, n * sizeof(uint), gData->nodeCounts,
+                            0, NULL, NULL);
+
+
   }
 
   if(err != CL_SUCCESS)
@@ -2393,6 +2410,11 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
         return rc;
 }
 
+void printBinary(uint32_t input){
+    for(int i = 31; i > -1; --i){
+        printf("%d", (input >> i) & 1);
+    }
+}
 
 //TODO: Write Barnes-Hut kernel handler
 NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
@@ -2470,7 +2492,12 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("MORTON CODES:\n");
     printf("- - - - - - - - - - - - - - \n");
     for(int i = 0; i < st->effNBody; ++i){
-        printf("%d\n", gData.mCodes[i]);
+        printf("%d:\t", i);
+        printBinary(gData.mCodes[i]);
+        printf(":\t");
+        // printBinary(gData.gpuTree[i].prefix);
+        printf("%d", gData.nodeCounts[i]);
+        printf("\n");
         // if(gData.mCodes[i] > 0){
         //     for(int j = i + 1; j < st->effNBody; ++j){
         //         if(gData.mCodes[i] == gData.mCodes[j]){

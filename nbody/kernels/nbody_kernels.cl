@@ -234,7 +234,7 @@ typedef __global real* restrict RVPtr;
 typedef __global volatile int* restrict IVPtr;
 typedef __global uint* restrict UVPtr;
 
-struct node;
+// struct node;
 
 typedef struct
 {
@@ -251,6 +251,9 @@ typedef struct
     RVPtr vy;
     RVPtr vz;
     RVPtr mass;
+
+    uint prefix;
+    uint delta;
 
 }node;
 
@@ -1513,16 +1516,8 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
 
   //CALCULATE MORTON CODE
   mCodes_G[g] = encodeLocation(pos_local);
-//   mCodes_G[g] = get_global_size(0) - 1 - g;
 
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
-
-//   if(l == 0){
-//     for(int i = 0; i < WARPSIZE; ++i){
-//       mCodes_G[group * WARPSIZE + i] = mCodes_L[i];
-//     }
-//   }
-
 
   //Use global thread ID as a LSB identifier to seperate morton code collisions.
 }
@@ -1630,7 +1625,7 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
                             RVPtr mass, RVPtr xMax, RVPtr yMax,
                             RVPtr zMax, RVPtr xMin, RVPtr yMin,
                             RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
-                            NVPtr gpuTree, NVPtr gpuLeafs){
+                            NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts){
 
     uint g = (uint) get_global_id(0);
     uint l = (uint) get_local_id(0);
@@ -1644,30 +1639,68 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     gpuLeafs[g].vy = &(vy[g]);
     gpuLeafs[g].vz = &(vz[g]);
 
+    gpuLeafs[g].prefix = mCodes_G[g];
+    gpuLeafs[g].prefix >>= 1;
+    gpuLeafs[g].prefix <<= 1;
+
+    nodeCounts[g] = 0;
+
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
-    int2 range = findRange(mCodes_G, EFFNBODY, g);
+    int2 range = findRange(mCodes_G, EFFNBODY - 1, g);
     int split = findSplit(mCodes_G, range.x, range.y);
 
     __global node* __private chA;
     __global node* __private chB;
 
+    uint delta = clz(mCodes_G[split]^(mCodes_G[split+1]));
+    gpuBinaryTree[g].delta = delta;    
     if(split == range.x){
-        chA = &gpuLeafs[split];   
+        chA = &gpuLeafs[split];
+        chA->delta = delta;
     }
     else{
-        chA = &gpuTree[split];
+        chA = &gpuBinaryTree[split];
     }
 
     if(split + 1 == range.y){
-        chB = &gpuLeafs[split];
+        chB = &gpuLeafs[split + 1];
+        chB->delta = delta;
     }
     else{
-        chB = &gpuTree[split];
+        chB = &gpuBinaryTree[split + 1];
     }
-    gpuTree[g].children[0] = chA;
-    gpuTree[g].children[1] = chB;
+    gpuBinaryTree[g].children[0] = chA;
+    gpuBinaryTree[g].children[1] = chB;
+    
+    // gpuBinaryTree[g].prefix = chB->delta;
+    gpuBinaryTree[g].prefix = mCodes_G[g];
+    gpuBinaryTree[g].prefix >>= (31 - delta);
+    gpuBinaryTree[g].prefix <<= (31 - delta);
 
-    chA->parent = &gpuTree[g];
-    chB->parent = &gpuTree[g];
+    chA->parent = &gpuBinaryTree[g];
+    chB->parent = &gpuBinaryTree[g];
+
+    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+
+    // nodeCounts[g] = delta;
+    nodeCounts[g] = (chA->delta/3 - delta/3) + (chB->delta/3 - delta/3);
 }
+
+__kernel void allocateOctree(RVPtr x, RVPtr y, RVPtr z,
+                        RVPtr vx, RVPtr vy, RVPtr vz,
+                        RVPtr ax, RVPtr ay, RVPtr az,
+                        RVPtr mass, RVPtr xMax, RVPtr yMax,
+                        RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
+                        NVPtr gpuBinaryTree, NVPtr gpuLeafs){
+
+    uint g = (uint) get_global_id(0);
+    uint l = (uint) get_local_id(0);
+    uint group = (uint) get_group_id(0);
+    
+
+}
+
+                            
+

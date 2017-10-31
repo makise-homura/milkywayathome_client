@@ -222,6 +222,9 @@ typedef struct
     real* vz;
     real* mass;
 
+    uint32_t prefix;
+    uint32_t delta;
+
 }gpuNode;
 
 typedef struct{
@@ -240,6 +243,8 @@ typedef struct{
     cl_mem gpuTree;
 
     cl_mem gpuLeafs;
+
+    cl_mem nodeCounts;
 
 }NBodyBuffers;
 
@@ -337,6 +342,9 @@ typedef struct
 
     uint32_t* mCodes;
     uint32_t* iteration;
+    uint32_t* nodeCounts;
+    
+    gpuNode* gpuTree;
 
 }gpuData;
 
