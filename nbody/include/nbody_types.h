@@ -204,10 +204,9 @@ typedef struct MW_ALIGN_TYPE
 //     cl_mem output;  
 // } NBodyBuffers;
 
-struct gpuNode;
+// struct gpuNode;
 
-typedef struct
-{
+typedef struct gpuNode{
     struct gpuNode* parent;
     struct gpuNode* children[8];
 
@@ -224,6 +223,13 @@ typedef struct
 
     uint32_t prefix;
     uint32_t delta;
+
+    uint isLeaf;
+    uint treeLevel;
+    uint mortonCode;
+
+    uint id;
+    uint chid[2];
 
 }gpuNode;
 
@@ -244,7 +250,10 @@ typedef struct{
 
     cl_mem gpuLeafs;
 
+    cl_mem gpuOctree;
+
     cl_mem nodeCounts;
+    cl_mem swap;
 
 }NBodyBuffers;
 
@@ -303,6 +312,10 @@ typedef struct
     cl_kernel encodeTree;
     cl_kernel bitonicMortonSort;
     cl_kernel constructTree;
+    cl_kernel countOctNodes;
+    cl_kernel prefixSum;
+    cl_kernel constructOctTree;
+    cl_kernel linkOctree;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;
 //     cl_kernel summarizationClear;
@@ -345,6 +358,7 @@ typedef struct
     uint32_t* nodeCounts;
     
     gpuNode* gpuTree;
+    gpuNode* gpuOctree;
 
 }gpuData;
 

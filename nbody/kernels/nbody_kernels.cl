@@ -234,7 +234,7 @@ typedef __global real* restrict RVPtr;
 typedef __global volatile int* restrict IVPtr;
 typedef __global uint* restrict UVPtr;
 
-// struct node;
+struct node;
 
 typedef struct
 {
@@ -255,6 +255,13 @@ typedef struct
     uint prefix;
     uint delta;
 
+    uint isLeaf;
+    uint treeLevel;
+    uint mortonCode;
+
+    uint id;
+    uint chid[2];
+    
 }node;
 
 typedef __global node* NVPtr;
@@ -1642,12 +1649,20 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     gpuLeafs[g].prefix = mCodes_G[g];
     gpuLeafs[g].prefix >>= 1;
     gpuLeafs[g].prefix <<= 1;
+    gpuLeafs[g].id = g;
+    gpuLeafs[g].isLeaf = 1;
+
+    
+    gpuBinaryTree[g].id = g;
+    
+    gpuLeafs[EFFNBODY - 1].id = EFFNBODY - 1;
+    gpuBinaryTree[EFFNBODY - 1].id = EFFNBODY - 1;
 
     nodeCounts[g] = 0;
 
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
-    int2 range = findRange(mCodes_G, EFFNBODY - 1, g);
+    int2 range = findRange(mCodes_G, EFFNBODY, g);
     int split = findSplit(mCodes_G, range.x, range.y);
 
     __global node* __private chA;
@@ -1676,31 +1691,119 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     // gpuBinaryTree[g].prefix = chB->delta;
     gpuBinaryTree[g].prefix = mCodes_G[g];
     gpuBinaryTree[g].prefix >>= (31 - delta);
-    gpuBinaryTree[g].prefix <<= (31 - delta);
+    // gpuBinaryTree[g].prefix <<= (31 - delta);
 
     chA->parent = &gpuBinaryTree[g];
     chB->parent = &gpuBinaryTree[g];
-
-    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
-
-    // nodeCounts[g] = delta;
-    nodeCounts[g] = (chA->delta/3 - delta/3) + (chB->delta/3 - delta/3);
+    chA->id = split;
+    chB->id = split + 1;
+    // chA->id = range.x;
+    // chB->id = range.y;
+    // gpuBinaryTree[g].chid[0] = split;
+    // gpuBinaryTree[g].chid[1] = split+1;
+    // nodeCounts[g] = (chA->delta/3 - delta/3) + (chB->delta/3 - delta/3);
+    
 }
 
-__kernel void allocateOctree(RVPtr x, RVPtr y, RVPtr z,
+
+//This function works
+__kernel void countOctNodes(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr vx, RVPtr vy, RVPtr vz,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
                         RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
-                        NVPtr gpuBinaryTree, NVPtr gpuLeafs){
+                        NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts){
 
     uint g = (uint) get_global_id(0);
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
-    
+    NVPtr node = &gpuBinaryTree[g];
+    NVPtr chA = gpuBinaryTree[g].children[0];
+    NVPtr chB = gpuBinaryTree[g].children[1];
+    node->chid[0] = chA->id;
+    node->chid[1] = chB->id;
+    if(g > 0){
+        nodeCounts[g] = (chA->delta/3 - node->delta/3) + (chB->delta/3 - node->delta/3);
+    }
+    // nodeCounts[g] = chB->delta;
+    // nodeCounts[g] = 1;
+    // barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
 }
 
-                            
+__kernel void prefixSum(UVPtr nodeCounts, UVPtr swap, UVPtr iteration){
+    uint g = (uint) get_global_id(0);
+    uint l = (uint) get_local_id(0);
+    uint group = (uint) get_group_id(0);
+    swap[g] = nodeCounts[g]; 
+    barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+    for(int i = 0; i < g; ++i){
+       nodeCounts[g] += swap[i];
+    }
 
+    // barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
+
+}
+
+__kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
+                            RVPtr vx, RVPtr vy, RVPtr vz,
+                            RVPtr ax, RVPtr ay, RVPtr az,
+                            RVPtr mass, RVPtr xMax, RVPtr yMax,
+                            RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                            RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
+                            NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts, NVPtr octree){
+
+    uint g = (uint) get_global_id(0);
+    uint l = (uint) get_local_id(0);
+    uint group = (uint) get_group_id(0);
+
+    uint index = nodeCounts[g] + 1; //We +1 because 0 is the root
+
+    gpuBinaryTree[g].delta = gpuBinaryTree[g].delta/3;
+    //We are on root node:
+    if(g == 0){
+        octree[0].treeLevel = 0;
+        octree[0].isLeaf = 0;
+        octree[0].parent = NULL;
+        octree[0].mortonCode = 0;
+        for(int i = 0; i < 8; ++i){
+            octree[0].children[i] = NULL;
+        }
+    }
+    else{
+        if(index > nodeCounts[g-1]){
+            for(int j = 0; j < nodeCounts[g] - nodeCounts[g-1] + 1; ++j){
+                octree[index + j].treeLevel = gpuBinaryTree[g].delta/3 + 1;
+                octree[index + j].prefix = gpuBinaryTree[g].prefix >> (octree[index + j].treeLevel * 3);//mCodes_G[g] >> (32 - (octree[index + j].treeLevel * 3));
+                for(int i = 0; i < 8; ++i){
+                    octree[index].children[i] = NULL;
+                }
+            }
+        }
+    }
+
+
+}
+
+kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
+                        RVPtr vx, RVPtr vy, RVPtr vz,
+                        RVPtr ax, RVPtr ay, RVPtr az,
+                        RVPtr mass, RVPtr xMax, RVPtr yMax,
+                        RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
+                        NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts, NVPtr octree){
+
+
+
+    uint g = (uint) get_global_id(0);
+    uint l = (uint) get_local_id(0);
+    uint group = (uint) get_group_id(0);
+
+    if(octree[g].treeLevel == 0){
+        octree[g].parent = NULL;
+    }
+    else if(octree[g].treeLevel == 1){
+        octree[g].parent = &octree[0];
+    }
+}
