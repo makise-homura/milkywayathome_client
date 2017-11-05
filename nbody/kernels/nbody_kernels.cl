@@ -1668,7 +1668,7 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     __global node* __private chA;
     __global node* __private chB;
 
-    uint delta = clz(mCodes_G[split]^(mCodes_G[split+1]));
+    uint delta = clz(mCodes_G[split]^mCodes_G[split+1]) - 2;
     gpuBinaryTree[g].delta = delta;    
     if(split == range.x){
         chA = &gpuLeafs[split];
@@ -1741,6 +1741,9 @@ __kernel void prefixSum(UVPtr nodeCounts, UVPtr swap, UVPtr iteration){
     for(int i = 0; i < g; ++i){
        nodeCounts[g] += swap[i];
     }
+    if(g > 0){
+        ++nodeCounts[g];
+    }
 
     // barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
@@ -1758,12 +1761,10 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    uint index = nodeCounts[g] + 1; //We +1 because 0 is the root
-
-    gpuBinaryTree[g].delta = gpuBinaryTree[g].delta/3;
+    // gpuBinaryTree[g].delta = gpuBinaryTree[g].delta/3;
     //We are on root node:
     if(g == 0){
-        octree[0].treeLevel = 0;
+        octree[0].treeLevel = nodeCounts[g];
         octree[0].isLeaf = 0;
         octree[0].parent = NULL;
         octree[0].mortonCode = 0;
@@ -1772,10 +1773,12 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
         }
     }
     else{
-        if(index > nodeCounts[g-1]){
-            for(int j = 0; j < nodeCounts[g] - nodeCounts[g-1] + 1; ++j){
+        if(nodeCounts[g] > nodeCounts[g-1]){
+            uint index = nodeCounts[g - 1] + 1; //We +1 because 0 is the root
+            for(int j = 0; j < nodeCounts[g] - nodeCounts[g-1]; ++j){
                 octree[index + j].treeLevel = gpuBinaryTree[g].delta/3 + 1;
-                octree[index + j].prefix = gpuBinaryTree[g].prefix >> (octree[index + j].treeLevel * 3);//mCodes_G[g] >> (32 - (octree[index + j].treeLevel * 3));
+                octree[index + j].delta = gpuBinaryTree[g].delta;
+                octree[index + j].prefix = gpuBinaryTree[g].prefix;// >> (octree[index + j].treeLevel * 3);//mCodes_G[g] >> (32 - (octree[index + j].treeLevel * 3));
                 for(int i = 0; i < 8; ++i){
                     octree[index].children[i] = NULL;
                 }
