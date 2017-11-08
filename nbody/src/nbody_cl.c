@@ -455,6 +455,7 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
         err |= nbSetKernelArguments(k->constructTree, st->nbb, exact);
         err |= nbSetKernelArguments(k->countOctNodes, st->nbb, exact);
         err |= nbSetKernelArguments(k->constructOctTree, st->nbb, exact);
+        err |= nbSetKernelArguments(k->linkOctree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -1278,7 +1279,7 @@ static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
 
 static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 {
-    cl_int err;
+    cl_int err; 
     size_t chunk;
     size_t nChunk;
     cl_int upperBound;
@@ -1313,6 +1314,8 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     if (err != CL_SUCCESS)
         return err;
 
+    // global[0] = st->effNBody;
+
     err = clSetKernelArg(kernels->countOctNodes, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->countOctNodes, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
     err = clSetKernelArg(kernels->countOctNodes, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1339,15 +1342,14 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     if (err != CL_SUCCESS)
     return err;
  
-    // uint32_t* nC = calloc(st->effNBody, sizeof(uint32_t));
-    // err |= clEnqueueReadBuffer(st->ci->queue,
-    //                         st->nbb->nodeCounts,
-    //                         CL_TRUE,
-    //                         0, st->effNBody*sizeof(uint32_t), nC,
-    //                         0, NULL, NULL);
+    uint32_t* nC = calloc(st->effNBody, sizeof(uint32_t));
+    err |= clEnqueueReadBuffer(st->ci->queue,
+                            st->nbb->nodeCounts,
+                            CL_TRUE,
+                            0, st->effNBody*sizeof(uint32_t), nC,
+                            0, NULL, NULL);
     
     global[0] = st->effNBody - 1;
-    // global[0] = nC[st->effNBody - 1];
     err = clSetKernelArg(kernels->constructOctTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
     err = clSetKernelArg(kernels->constructOctTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1356,15 +1358,20 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
                                 0, global, NULL,
                                 0, NULL, &ev);
 
+    err = clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+                            
 
-
-    // err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    // err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
-    // err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    // err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    // err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
-    //                             0, global, NULL,
-    //                             0, NULL, &ev);
+    global[0] = nC[st->effNBody - 1];
+    printf("GLOBAL %d <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", global[0]);
+    err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
+    err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
 
 
     clFinish(ci->queue);
@@ -2491,6 +2498,9 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
 void printBinary(uint32_t input){
     for(int i = 31; i > -1; --i){
         printf("%d", (input >> i) & 1);
+        if(i % 3 == 0){
+            printf("|");
+        }
     }
 }
 
@@ -2570,12 +2580,13 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("MORTON CODES:\n");
     printf("- - - - - - - - - - - - - - \n");
     for(int i = 0; i < st->effNBody; ++i){
+        printf("%d:\t", i);
         // printBinary(gData.gpuTree[i].prefix);
-        // printBinary(gData.mCodes[i]);
+        printBinary(gData.mCodes[i]);
         // printf("\t%d", gData.gpuTree[i].delta);
-        // printf("\tNODE: %d \t CHILDREN: %d | %d\n", gData.nodeCounts[i], gData.gpuTree[i].chid[0], gData.gpuTree[i].chid[1]);
+        printf("   NODE: %d\tD: %d\tPARENT: %d\n", gData.nodeCounts[i], gData.gpuTree[i].delta, gData.gpuTree[i].parent);
     //     printf("%d:\t", i);
-    //     printf("%d", gData.nodeCounts[i]);
+        // printf("\t%d", gData.nodeCounts[i]);
         // printBinary(gData.mCodes[i]);
     // //     printf(":\t");
     // //     // printBinary(gData.gpuTree[i].prefix);
@@ -2590,18 +2601,21 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     //     // }
     }
     printf("----------------------------\n");
-    printf("REQURED OCTREE NODES: %d\n", gData.nodeCounts[st->effNBody - 1] + 1);
+    int octCount = gData.nodeCounts[st->effNBody - 1];
+    printf("REQURED OCTREE NODES: %d\n", octCount);
     fflush(NULL);
     printf("----------------------------\n");
     printf("GPU OCTREE:\n");
     int count[10] = {0};
-    for(int i = 0; i < gData.nodeCounts[st->effNBody - 1] + 1; ++i){
+    for(int i = 0; i < octCount; ++i){
         ++count[gData.gpuOctree[i].treeLevel];
-        // printf("LEVEL: %d\t DELTA: %d\t", gData.gpuOctree[i].treeLevel, gData.gpuOctree[i].delta);
-        // printBinary(gData.gpuOctree[i].prefix);
-        // printf("\n");
+        printBinary(gData.gpuOctree[i].prefix);        
+        printf("\tID: %d\tLEVEL: %d\tPARENT: %d", gData.gpuOctree[i].id, gData.gpuOctree[i].treeLevel, gData.gpuOctree[i].parent);
+        printf("\n");
     }
 
+    printf("---------------------------\n");
+    printf("LEVEL INFORMATION:\n");
     for(int i = 0; i < 10; ++i){
         printf("Level %d: %d\n", i, count[i]);
     }

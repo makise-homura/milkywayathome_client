@@ -207,19 +207,12 @@ typedef struct MW_ALIGN_TYPE
 // struct gpuNode;
 
 typedef struct gpuNode{
-    struct gpuNode* parent;
-    struct gpuNode* children[8];
+    uint parent;
+    uint children[8];
+    uint leafIndex[8];
 
-    struct gpuNode* next;
-    struct gpuNode* more;
-
-    real* x;
-    real* y;
-    real* z;
-    real* vx;
-    real* vy;
-    real* vz;
-    real* mass;
+    uint next;
+    uint more;
 
     uint32_t prefix;
     uint32_t delta;
@@ -228,8 +221,12 @@ typedef struct gpuNode{
     uint treeLevel;
     uint mortonCode;
 
+    uint lock;
+
     uint id;
     uint chid[2];
+
+    uint pid;
 
 }gpuNode;
 
