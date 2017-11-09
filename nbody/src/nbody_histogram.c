@@ -51,7 +51,7 @@ static real nbHistogramBetaBinSize(const HistogramParams* hp)
 }
 
 real nbNormalizedHistogramError(unsigned int n, real total)
-{
+{/*error in the counts is the square root of the counts*/
     return (n == 0) ? inv(total) : mw_sqrt((real) n) / total;
 }
 
@@ -102,6 +102,7 @@ unsigned int nbCorrectTotalNumberInHistogram(const NBodyHistogram* histogram, /*
     return totalNum;
 }
 
+/*writes out the header of the histograms, which provide a number of useful bits of information*/
 static void nbPrintHistogramHeader(FILE* f,
                                    const NBodyCtx* ctx,
                                    const HistogramParams* hp,
@@ -163,7 +164,7 @@ static void nbPrintHistogramHeader(FILE* f,
         return;
     }
 
-
+    /*type of potential used to represent the milkyway*/
     switch (p->disk.type)
     {
         case MiyamotoNagaiDisk:
@@ -308,7 +309,7 @@ void nbWriteHistogram(const char* histoutFileName,
         f = mwOpenResolved(histoutFileName, "w+");
         if (f == NULL)
         {
-            mwPerror("Error opening histogram '%s'. Using default output instead.", histoutFileName);
+            mwPerror("Error opening histogram '%s'. Using default output instead.", histoutFileName);/* couldn't open file for editting. will dump hist to stdout*/
             f = DEFAULT_OUTPUT_FILE;
         }
     }
@@ -377,10 +378,11 @@ NBodyHistogram* nbCreateHistogram(const NBodyCtx* ctx,        /* Simulation cont
     unsigned int betaIndex;
     unsigned int Histindex;
     unsigned int totalNum = 0;
-    Body* p;
+    Body* p; /*struct that stores the body information such as velocities*/
+    /*the NBodyHistogram is a struct that will store histogram information. to know what it has look at where it is defined*/
     NBodyHistogram* histogram;
-    HistData* histData;
-    NBHistTrig histTrig;
+    HistData* histData;/*another struct that actually stores the counts. */
+    NBHistTrig histTrig;/*where all the angles are sent for conversion from xyz to lambda beta*/
     const Body* endp = st->bodytab + st->nbody;
     real lambdaSize = nbHistogramLambdaBinSize(hp);
     real betaSize = nbHistogramBetaBinSize(hp);
@@ -410,6 +412,7 @@ NBodyHistogram* nbCreateHistogram(const NBodyCtx* ctx,        /* Simulation cont
     
     real v_line_of_sight;
     
+    /*mass per particle can be different between light and dark matter. also calculates number of light matter particles*/
     for (int i = 0; i < Nbodies; i++)
     {
         const Body* b = &st->bodytab[i];
@@ -440,6 +443,7 @@ NBodyHistogram* nbCreateHistogram(const NBodyCtx* ctx,        /* Simulation cont
     }
 
 
+    /*goes through the list of bodies and bins them*/
     for (p = st->bodytab; p < endp; ++p)
     {
         /* Only include bodies in models we aren't ignoring (like dark matter) */
@@ -479,7 +483,7 @@ NBodyHistogram* nbCreateHistogram(const NBodyCtx* ctx,        /* Simulation cont
 
     histogram->totalNum = totalNum; /* Total particles in range */
     
-    
+    /*when you remove outliers you have to then correct the velocity dispersion*/
     nbCalcVelDisp(histogram, correct_dispersion);
     correct_dispersion = TRUE;
     /* this converges somewhere between 3 and 6 iterations */

@@ -27,11 +27,13 @@
 #include "nbody_coordinates.h"
 #include "nbody_mass.h"
 
+/*standard header for all output files*/
 static void nbPrintSimInfoHeader(FILE* f, const NBodyFlags* nbf, const NBodyCtx* ctx, const NBodyState* st)
 {
     mwvector cmPos;
     mwvector cmVel;
     cmVel = nbCenterOfMom(st);
+    /*gets the center of mass and momentum to print in the header*/
     if (st->tree.root)
     {
         cmPos = Pos(st->tree.root);
@@ -55,9 +57,10 @@ static void nbPrintSimInfoHeader(FILE* f, const NBodyFlags* nbf, const NBodyCtx*
 
 }
 
+/*column titles of the date. different headers depending on user input flag*/
 static void nbPrintBodyOutputHeader(FILE* f, int cartesian, int both)
 {
-    if (both)
+    if (both)/*prints both lbr and xyz*/
     {
         fprintf(f, "# ignore %22s %22s %22s %22s %22s %22s %22s %22s %22s %22s %22s\n",
                 "x", 
@@ -73,7 +76,7 @@ static void nbPrintBodyOutputHeader(FILE* f, int cartesian, int both)
                 "v_los"
             );
     }
-    else
+    else/*prints either lbr or xyz */
     {
         fprintf(f, "# ignore %22s %22s %22s %22s %22s %22s %22s\n",
                 cartesian ? "x" : "l",
@@ -89,6 +92,7 @@ static void nbPrintBodyOutputHeader(FILE* f, int cartesian, int both)
 }
 
 /* output: Print bodies */
+/*also a good example on how to access the various components of body struct*/
 int nbOutputBodies(FILE* f, const NBodyCtx* ctx, const NBodyState* st, const NBodyFlags* nbf)
 {
     Body* p;

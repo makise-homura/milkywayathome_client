@@ -22,9 +22,14 @@
 #include "nbody_types.h"
 #include "nbody.h"
 #include "nbody_io.h"
+/* Here you will find a number of options that can be utilized by developers. */
+/* To use these options, you have to compile with -DNBODY_DEV_OPTIONS=ON and turn the individual options on from lua*/
 
+
+/*option to create an output file during sim. When used, it will do this with a user defined frequency*/
 int dev_write_outputs(const NBodyCtx* ctx, const NBodyState* st, const NBodyFlags* nbf, real freq)
 {
+    
     int rc = 0;
     if((st->step + 1) % (int) freq == 0)
     {

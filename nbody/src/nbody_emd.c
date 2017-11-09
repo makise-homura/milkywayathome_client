@@ -1327,8 +1327,10 @@ real nbMatchEMD(const NBodyHistogram* data, const NBodyHistogram* histogram)
         dat[i].beta = (real) data->data[i].beta;
     }
 
+    /*let the emd do its thing*/
     emd = emdCalc((const real*) dat, (const real*) hist, bins, bins, NULL);
-
+    
+    /*rounding the emd result at the 9th decimal place*/
     emd *= 1.0e9;
     emd = mw_round(emd);
     emd *= 1.0e-9;

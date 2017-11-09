@@ -19,7 +19,8 @@ along with Milkyway@Home.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "nbody_types.h"
 #include "nbody_defaults.h"
-
+/*these are default values for the various variables in the nbody ctx struct*/
+/*good to set these incase the variable value is not provided by user*/
 const NBodyCtx defaultNBodyCtx =
 {
     /* Grr lack of C99 named struct initializers in MSVC */

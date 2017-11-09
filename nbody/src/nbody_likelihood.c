@@ -60,6 +60,7 @@ int nbGetLikelihoodInfo(const NBodyFlags* nbf, HistogramParams* hp, NBodyLikelih
     return FALSE;
 }
 
+/*can match two input histograms without running simulation. input flags determine whether to use vel disps. check flag discriptions*/
 real nbMatchHistogramFiles(const char* datHist, const char* matchHist, mwbool use_veldisp)
 {
     NBodyHistogram* dat;
@@ -73,13 +74,13 @@ real nbMatchHistogramFiles(const char* datHist, const char* matchHist, mwbool us
 
     if (dat && match)
     {
-        emd = nbMatchEMD(dat, match);
-        cost_component = nbCostComponent(dat, match);
+        emd = nbMatchEMD(dat, match);                    /*geometric component. basically, do the hists look alike*/
+        cost_component = nbCostComponent(dat, match);    /*cost component. how different are the masses in each hist*/
         likelihood = emd + cost_component;
         
         if(use_veldisp)
         {
-            vel_disp = nbVelocityDispersion(dat, match);
+            vel_disp = nbVelocityDispersion(dat, match); /*compares the line of sight vel disps bin by bin. */
             likelihood += vel_disp;
         }
         
@@ -131,7 +132,7 @@ real nbSystemLikelihood(const NBodyState* st,
         if (histogram->totalNum < 0.0001 * (real) st->nbody)
         {
             real worstEMD;
-
+            /*if the number of bodies in the hist is really small, it will not bother with comparing. It will return the default worst likelihood*/
             mw_printf("Number of particles in bins is very small compared to total. "
                       "(%u << %u). Skipping distance calculation\n",
                       histogram->totalNum,
@@ -142,23 +143,23 @@ real nbSystemLikelihood(const NBodyState* st,
             return worstEMD; //Changed.  See above comment.
         }
 
-        geometry_component = nbMatchEMD(data, histogram);
+        geometry_component = nbMatchEMD(data, histogram); /*geometric component. basically, do the hists look alike*/
     }
     else
     {
-        geometry_component = nbCalcChisq(data, histogram, method);
+        geometry_component = nbCalcChisq(data, histogram, method); /*if not EMD, uses chisq, which is not very good at comparing the hists*/
     }
     
     /* likelihood due to the amount of mass in the histograms */
     
-    cost_component = nbCostComponent(data, histogram);
+    cost_component = nbCostComponent(data, histogram); /*cost component. how different are the masses in each hist*/
 
     likelihood = geometry_component + cost_component;
     
     /* likelihood due to the vel dispersion per bin of the two hist */
     if(st->useVelDisp)
     {
-        velocity_dispersion_component = nbVelocityDispersion(data, histogram);
+        velocity_dispersion_component = nbVelocityDispersion(data, histogram);   /*compares the line of sight vel disps bin by bin. */
         likelihood += velocity_dispersion_component;
     }
     return likelihood;

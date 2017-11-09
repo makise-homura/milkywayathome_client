@@ -120,7 +120,7 @@ static void nbPrintCopyright(void)
 }
 
 static void nbPrintVersion(int boincTag, int verbose)
-{
+{/* prints out the current version of the nbody binary */
     char versionStr[2048];
 
     snprintf(versionStr, sizeof(versionStr),
@@ -209,39 +209,39 @@ static mwbool nbReadParameters(const int argc, const char* argv[], NBodyFlags* n
        poptGetNextOpt(). Some mailing list post suggestst that this
        is some kind of semi-intended bug to work around something or other */
     static const struct poptOption options[] =
-    {
+    {/*These are the different possible flags*/
         {
-            "input-file", 'f',
+            "input-file", 'f',/*this is the input lua file flag*/
             POPT_ARG_STRING, &nbf.inputFile,
             0, "Input Lua file to read", NULL
         },
 
         {
-            "histoout-file", 'z',
+            "histoout-file", 'z',/*the flag for the output histogram file.*/
             POPT_ARG_STRING, &nbf.histoutFileName,
             0, "Output histogram file", NULL
         },
 
         {
-            "histogram-file", 'h',
+            "histogram-file", 'h',/*this is the input histogram file which the simulation will be compared to. not required*/
             POPT_ARG_STRING, &nbf.histogramFileName,
             0, "Histogram file", NULL
         },
 
         {
-            "match-histogram", 's',
+            "match-histogram", 's',/*possible to simply match two histograms without running simulation. required: -h flag for the first hist and this flag for second hist*/
             POPT_ARG_STRING, &nbf.matchHistogram,
             0, "Only match this histogram against other histogram (requires histogram argument)", NULL
         },
         
         {
-            "match-histogram-veldisp", 'S',
+            "match-histogram-veldisp", 'S',/*same as above -s flag, but comparison uses velocity dispersions in the likelihood*/
             POPT_ARG_STRING, &nbf.matchHistVelDisp,
             0, "Only match this histogram against other histogram (requires histogram argument) with vel disp comparison", NULL
         },
         
         {
-            "output-file", 'o',
+            "output-file", 'o',/*flag for the name of the output file. this one has the end coordinates of all bodies*/
             POPT_ARG_STRING, &nbf.outFileName,
             0, "Output file", NULL
         },
@@ -255,13 +255,13 @@ static mwbool nbReadParameters(const int argc, const char* argv[], NBodyFlags* n
       #endif
 
         {
-            "output-cartesian", 'x',
+            "output-cartesian", 'x', /*controls output file format. this will have just xyz and vels*/
             POPT_ARG_NONE, &nbf.outputCartesian,
             0, "Output Cartesian coordinates instead of lbR", NULL
         },
         
         {
-            "output-lbrcartesian", 'b',
+            "output-lbrcartesian", 'b',/*this will have both xyz and lbr with the velocities in the output file*/
             POPT_ARG_NONE, &nbf.outputlbrCartesian,
             0, "Output both lbr and Cartesian coordinates", NULL
         },
@@ -279,7 +279,7 @@ static mwbool nbReadParameters(const int argc, const char* argv[], NBodyFlags* n
         },
 
         {
-            "checkpoint", 'c',
+            "checkpoint", 'c', /*if running from a checkpoint, this is the name of said checkpoint*/
             POPT_ARG_STRING, &nbf.checkpointFileName,
             0, "Checkpoint file to use", NULL
         },
@@ -309,7 +309,7 @@ static mwbool nbReadParameters(const int argc, const char* argv[], NBodyFlags* n
         },
 
         {
-            "visualizer", 'u',
+            "visualizer", 'u', /*the flag to turn on the visualizer. Binary must have been built with opengl on*/
             POPT_ARG_NONE, &nbf.visualizer,
             0, "Try to run N-body visualization", NULL
         },
@@ -339,7 +339,7 @@ static mwbool nbReadParameters(const int argc, const char* argv[], NBodyFlags* n
         },
 
         {
-            "nthreads", 'n',
+            "nthreads", 'n', /*how many threads to use when running nbody multithreaded*/
             POPT_ARG_INT, &nbf.numThreads,
             0, "BOINC argument for number of threads. No effect if built without OpenMP", NULL
         },
@@ -357,7 +357,7 @@ static mwbool nbReadParameters(const int argc, const char* argv[], NBodyFlags* n
         },
 
         {
-            "seed", 'e',
+            "seed", 'e', /*random number seed for the simulation. Not really used as the seed is reset in the lua files*/
             POPT_ARG_INT, &nbf.seed,
             SEED_ARGUMENT, "seed for PRNG", NULL
         },
@@ -387,7 +387,7 @@ static mwbool nbReadParameters(const int argc, const char* argv[], NBodyFlags* n
         },
 
         {
-            "progress", 'P',
+            "progress", 'P', /*prints out the percent progress of the simulation to stdout*/
             POPT_ARG_NONE, &nbf.reportProgress,
             0, "Print verbose progress information, possibly with curses", NULL
         },
@@ -444,7 +444,7 @@ static mwbool nbReadParameters(const int argc, const char* argv[], NBodyFlags* n
         return TRUE;
     }
 
-    if (version)
+    if (version)/*prints out the verion of the nbody binary being called*/
     {
         nbPrintVersion(FALSE, nbf.verbose);
     }
