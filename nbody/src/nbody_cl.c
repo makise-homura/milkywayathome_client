@@ -633,7 +633,7 @@ static char* nbGetCompileFlags(const NBodyCtx* ctx, const NBodyState* st, const 
                  ctx->useQuad,
 
                  /* Set criterion */
-                 ctx->criterion == NewCriterion,
+                 ctx->criterion == TreeCode,
                  ctx->criterion == SW93,
                  ctx->criterion == BH86,
                  ctx->criterion == Exact,
@@ -1946,6 +1946,7 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
     }*/
 
     /* If we are doing an exact Nbody, we don't need the rest */
+<<<<<<< HEAD
 //     if (ctx->criterion != Exact)
 //     {
 //         nbb->start = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(cl_int));
@@ -1968,6 +1969,30 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
 //             }
 //         }
 //    }
+=======
+    if (ctx->criterion != Exact)
+    {
+        nbb->start = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(cl_int));
+        nbb->count = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(cl_int));
+        nbb->sort = mwCreateZeroReadWriteBuffer(ci, st->effNBody * sizeof(cl_int));
+        nbb->child = mwCreateZeroReadWriteBuffer(ci, NSUB * (nNode + 1) * sizeof(cl_int));
+
+        if (!nbb->start || !nbb->count || !nbb->sort || !nbb->child)
+        {
+            return MW_CL_ERROR;
+        }
+
+        if (ctx->criterion == SW93 || ctx->criterion == TreeCode)
+        {
+            /* This only is for cells, so we could subtract nbody if we wanted */
+            nbb->critRadii = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
+            if (!nbb->critRadii)
+            {
+                return MW_CL_ERROR;
+            }
+        }
+    }
+>>>>>>> 9d9671983d6c97e7539f80eb465b9ab0ded7c9ef
 
     return CL_SUCCESS;
 }

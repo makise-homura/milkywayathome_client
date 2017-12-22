@@ -1,6 +1,6 @@
 #!/bin/bash
 ./bin/milkyway_nbody \
-    -f nbody/sample_workunits/for_developers.lua \
+    -f nbody/sample_workunits/test_suite_for_developers.lua \
     -o output_0gy.out \
     -z hist_test.hist \
     -n 8 -b  \

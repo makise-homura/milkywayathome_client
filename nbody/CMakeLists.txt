@@ -23,7 +23,7 @@ project(milkyway_nbody)
 
 set(nbody_VERSION_MAJOR 1
           CACHE INTERNAL "N-body version number")
-set(nbody_VERSION_MINOR 64
+set(nbody_VERSION_MINOR 66
           CACHE INTERNAL "N-body version number")
 set(nbody_VERSION "${nbody_VERSION_MAJOR}.${nbody_VERSION_MINOR}"
           CACHE INTERNAL "N-body version number")
@@ -43,7 +43,6 @@ cmake_dependent_option(ENABLE_CURSES "Report progress with curses" ON
 if(NBODY_GL)
   include_directories(${OPENGL_INCLUDE_DIR})
   include_directories(${GLFW_INCLUDE_DIR})
-  include_directories(${GLM_INCLUDE_DIR})
 endif()
 
 cmake_dependent_option(NBODY_STATIC "Build Nbody as fully static binary" ON
@@ -135,6 +134,7 @@ set(nbody_lib_src ${NBODY_SRC_DIR}/nbody_chisq.c
                   ${NBODY_SRC_DIR}/nbody_check_params.c
                   ${NBODY_SRC_DIR}/nbody_isotropic.c
                   ${NBODY_SRC_DIR}/nbody_mixeddwarf.c
+                  ${NBODY_SRC_DIR}/nbody_manual_bodies.c
                   ${NBODY_SRC_DIR}/nbody_dwarf_potential.c
                   ${NBODY_SRC_DIR}/nbody_plummer.c
                   ${NBODY_SRC_DIR}/nbody_nfw.c
@@ -147,6 +147,7 @@ set(nbody_lib_src ${NBODY_SRC_DIR}/nbody_chisq.c
                   ${NBODY_SRC_DIR}/nbody_util.c
                   ${NBODY_SRC_DIR}/nbody_emd.c
                   ${NBODY_SRC_DIR}/nbody_mass.c
+                  ${NBODY_SRC_DIR}/nbody_devoptions.c
                   ${NBODY_SRC_DIR}/nbody_likelihood.c
                   ${NBODY_SRC_DIR}/nbody_histogram.c
                   ${NBODY_SRC_DIR}/nbody_caustic.c
@@ -163,6 +164,7 @@ set(nbody_lib_headers ${NBODY_INCLUDE_DIR}/nbody_chisq.h
                       ${NBODY_INCLUDE_DIR}/nbody_check_params.h
                       ${NBODY_INCLUDE_DIR}/nbody_isotropic.h
                       ${NBODY_INCLUDE_DIR}/nbody_mixeddwarf.h
+                      ${NBODY_INCLUDE_DIR}/nbody_manual_bodies.h
                       ${NBODY_INCLUDE_DIR}/nbody_dwarf_potential.h
                       ${NBODY_INCLUDE_DIR}/nbody_plummer.h
                       ${NBODY_INCLUDE_DIR}/nbody_nfw.h
@@ -180,6 +182,7 @@ set(nbody_lib_headers ${NBODY_INCLUDE_DIR}/nbody_chisq.h
                       ${NBODY_INCLUDE_DIR}/nbody_graphics.h
                       ${NBODY_INCLUDE_DIR}/nbody_emd.h
                       ${NBODY_INCLUDE_DIR}/nbody_mass.h
+                      ${NBODY_INCLUDE_DIR}/nbody_devoptions.h
                       ${NBODY_INCLUDE_DIR}/nbody_likelihood.h
                       ${NBODY_INCLUDE_DIR}/nbody_histogram.h
                       ${NBODY_INCLUDE_DIR}/nbody_caustic.h
@@ -273,6 +276,10 @@ set(nbody_link_libs )
 
 if(NBODY_BLENDER_OUTPUT)
   add_definitions("-DNBODY_BLENDER_OUTPUT")
+endif()
+
+if(NBODY_DEV_OPTIONS)
+  add_definitions("-DNBODY_DEV_OPTIONS")
 endif()
 
 if(NBODY_OPENCL)

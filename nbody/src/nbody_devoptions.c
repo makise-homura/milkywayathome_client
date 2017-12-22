@@ -17,35 +17,30 @@
  * along with Milkyway@Home.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NBODY_MASS_H_
-#define _NBODY_MASS_H_
-
-#include "nbody_types.h"
+#include "nbody_devoptions.h"
 #include "milkyway_math.h"
+#include "nbody_types.h"
+#include "nbody.h"
+#include "nbody_io.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-real probability_match(int n, real k, real pobs);
-
-real GammaFunc(const real z);
-
-real IncompleteGammaFunc(real a, real x);
-
-real nbCostComponent(const NBodyHistogram* data, const NBodyHistogram* histogram);
-
-real calc_vLOS(const mwvector v, const mwvector p, real sunGCdist);
-
-void nbCalcVelDisp(NBodyHistogram* histogram, mwbool correct_dispersion);
-
-void nbRemoveOutliers(const NBodyState* st, NBodyHistogram* histogram, real * use_body, real * vlos);
-
-
-real nbVelocityDispersion(const NBodyHistogram* data, const NBodyHistogram* histogram);
-
-#ifdef __cplusplus
+int dev_write_outputs(const NBodyCtx* ctx, const NBodyState* st, const NBodyFlags* nbf, real freq)
+{
+    int rc = 0;
+    if((st->step + 1) % (int) freq == 0)
+    {
+        
+        FILE* f;
+        char output_file_name[1024];
+        sprintf(output_file_name, "%d", st->step);
+        
+        f = mwOpenResolved(output_file_name, "w+");
+        rc = nbOutputBodies(f, ctx, st, nbf);
+        fclose(f);
+        
+    }
+    
+    return rc;
 }
-#endif
 
-#endif
+
+

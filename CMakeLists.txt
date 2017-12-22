@@ -184,6 +184,10 @@ option(NBODY_BLENDER_OUTPUT
         "Builds with the ability to output for use with Blender Visualizer." OFF)
 mark_as_advanced(NBODY_BLENDER_OUTPUT)
 
+option(NBODY_DEV_OPTIONS
+        "Builds with the ability to turn on options useful for developers." OFF)
+mark_as_advanced(NBODY_DEV_OPTIONS)
+
 cmake_dependent_option(NBODY_CRLIBM "Use crlibm for maths" ON
                          "DOUBLEPREC" ON)
 mark_as_advanced(NBODY_CRLIBM)
@@ -427,9 +431,10 @@ if(NBODY_GL)
   if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/glm/CMakeLists.txt)
     message(FATAL_ERROR "GLM submodule is missing. Did you forget to git submodule init; git submodule update?")
   endif()
-  set(GLM_PACKAGE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/glm)
-  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/glm/util)
   find_package(GLM)
+  include_directories(${GLM_INCLUDE_DIRECTORIES})
+  link_directories(${GLM_LIBRARY_DIRS})
+  add_definitions(${GLM_DEFINITIONS})
 endif()
 
 

@@ -38,5 +38,5 @@ void registerGenerateMixedDwarf(lua_State* luaSt);
 }
 #endif
 
-#endif /* _NBODY_DWARF_POTENTIAL_H_ */
+#endif /* _NBODY_MIXEDDWARF_H_ */
 

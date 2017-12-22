@@ -2,6 +2,8 @@
 Szymanski, Heidi Newberg, Carlos Varela, Malik Magdon-Ismail and
 Rensselaer Polytechnic Institute.
 
+Copyright 2016 Siddhartha Shelton
+
 This file is part of Milkway@Home.
 
 Milkyway@Home is free software: you can redistribute it and/or modify
@@ -18,21 +20,23 @@ You should have received a copy of the GNU General Public License
 along with Milkyway@Home.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _NBODY_IO_H_
-#define _NBODY_IO_H_
+#ifndef _NBODY_MANUALBODIES_H_
+#define _NBODY_MANUALBODIES_H_
 
+#include <lua.h>
 #include "nbody_types.h"
-#include "nbody.h"
+#include "nbody_potential_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int nbWriteBodies(const NBodyCtx* ctx, const NBodyState* st, const NBodyFlags* nbf);
-int nbOutputBodies(FILE* f, const NBodyCtx* ctx, const NBodyState* st, const NBodyFlags* nbf);
+int nbGenerateManualBodies(lua_State* luaSt);
+void registerGenerateManualBodies(lua_State* luaSt);
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _NBODY_IO_H_ */
+#endif /* _NBODY_MANUALBODIES_H_ */
 
