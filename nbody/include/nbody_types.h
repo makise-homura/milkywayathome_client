@@ -311,6 +311,8 @@ typedef struct
     cl_kernel constructTree;
     cl_kernel countOctNodes;
     cl_kernel prefixSum;
+    cl_kernel prefixSumUpsweep;
+    cl_kernel prefixSumDownsweep;
     cl_kernel constructOctTree;
     cl_kernel linkOctree;
 //     cl_kernel buildTreeClear;

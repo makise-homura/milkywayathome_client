@@ -1719,12 +1719,22 @@ __kernel void prefixSumUpsweep(UVPtr nodeCounts, UVPtr swap, UVPtr iteration){
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
+    //index = g * 2^(iteration + 1)
+    uint index = g * (1 << (*iteration + 1));
+    nodeCounts[index + (1 << (*iteration + 1) - 1)] = nodeCounts[index + (1 << (*iteration))] + nodeCounts[index + (1 << (*iteration + 1))- 1];
+    ++(*iteration);
 }
 
 __kernel void prefixSumDownsweep(UVPtr nodeCounts, UVPtr swap, UVPtr iteration){
     uint g = (uint) get_global_id(0);
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
+    uint index = g * (1 << (*iteration + 1));
+
+    uint t = nodeCounts[index + (1 << (*iteration)) - 1];
+    nodeCounts[index + (1 << (*iteration)) - 1] = nodeCounts[index + (1 << (*iteration + 1)) - 1];
+    nodeCounts[index + (1 << (*iteration + 1)) - 1] = t + nodeCounts[index + (1 << (*iteration + 1)) - 1];
+    --(*iteration);
 }
 
 __kernel void prefixSum(UVPtr nodeCounts, UVPtr swap, UVPtr iteration){
