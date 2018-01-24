@@ -1703,38 +1703,52 @@ __kernel void countOctNodes(RVPtr x, RVPtr y, RVPtr z,
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    if(g != 0){
-        // NVPtr node = &gpuBinaryTree[g];
-        uint delta = gpuBinaryTree[g].delta;
-        uint parentDelta = gpuBinaryTree[gpuBinaryTree[g].parent].delta;
-        nodeCounts[g] = delta/3 - parentDelta/3;
-    }
-    else{
-        nodeCounts[g] = 1;
-    }
+    // if(g != 0){
+    //     // NVPtr node = &gpuBinaryTree[g];
+    //     uint delta = gpuBinaryTree[g].delta;
+    //     uint parentDelta = gpuBinaryTree[gpuBinaryTree[g].parent].delta;
+    //     nodeCounts[g] = delta/3 - parentDelta/3;
+    // }
+    // else{
+    //     nodeCounts[g] = 1;
+    // }
+
+    nodeCounts[g] = 1;
+    // nodeCounts[0] = 1;
 }
 
-__kernel void prefixSumUpsweep(UVPtr nodeCounts, UVPtr swap, UVPtr iteration){
-    uint g = (uint) get_global_id(0);
-    uint l = (uint) get_local_id(0);
-    uint group = (uint) get_group_id(0);
+#define STRIDE(iteration, offset) (1 << (iteration + offset))
 
-    //index = g * 2^(iteration + 1)
-    uint index = g * (1 << (*iteration + 1));
-    nodeCounts[index + (1 << (*iteration + 1) - 1)] = nodeCounts[index + (1 << (*iteration))] + nodeCounts[index + (1 << (*iteration + 1))- 1];
-    ++(*iteration);
+__kernel void prefixSumUpsweep(UVPtr nodeCounts, UVPtr iteration){
+    uint g = (uint) get_global_id(0);
+    uint currentIteration = (*iteration);
+    uint index = g * STRIDE(currentIteration, 1);
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
+    nodeCounts[index + STRIDE(currentIteration, 1) - 1] = nodeCounts[index + STRIDE(currentIteration, 0) - 1] 
+                                                + nodeCounts[index + STRIDE(currentIteration, 1) - 1];
+    
+    (*iteration) = currentIteration + 1;
 }
 
-__kernel void prefixSumDownsweep(UVPtr nodeCounts, UVPtr swap, UVPtr iteration){
+__kernel void prefixSumDownsweep(UVPtr nodeCounts, UVPtr iteration){
     uint g = (uint) get_global_id(0);
-    uint l = (uint) get_local_id(0);
-    uint group = (uint) get_group_id(0);
-    uint index = g * (1 << (*iteration + 1));
+    uint currentIteration = (*iteration);
 
-    uint t = nodeCounts[index + (1 << (*iteration)) - 1];
-    nodeCounts[index + (1 << (*iteration)) - 1] = nodeCounts[index + (1 << (*iteration + 1)) - 1];
-    nodeCounts[index + (1 << (*iteration + 1)) - 1] = t + nodeCounts[index + (1 << (*iteration + 1)) - 1];
-    --(*iteration);
+    if(get_global_size(0) == 1){
+        nodeCounts[EFFNBODY - 1] = 0;
+    }
+
+    barrier(CLK_GLOBAL_MEM_FENCE);
+    
+    uint index = g * STRIDE(currentIteration, 0);
+    uint t = nodeCounts[index + STRIDE(currentIteration, -1) - 1];
+
+    nodeCounts[index + STRIDE(currentIteration, -1) - 1] = nodeCounts[index + STRIDE(currentIteration, 0) - 1];
+    nodeCounts[index + STRIDE(currentIteration, 0) - 1] = t + nodeCounts[index + STRIDE(currentIteration, 0) - 1];
+    
+    (*iteration) = currentIteration - 1;
 }
 
 __kernel void prefixSum(UVPtr nodeCounts, UVPtr swap, UVPtr iteration){

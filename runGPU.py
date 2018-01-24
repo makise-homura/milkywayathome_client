@@ -19,7 +19,9 @@ os.system('rm GPUACCTEST.out')
 os.chdir('../build')
 if("-b" in sys.argv):
     os.system("cmake ../milkywayathome_client -DBOINC_APPLICATION=OFF -DNBODY_OPENCL=ON -DDOUBLEPREC=ON -DCMAKE_BUILD_TYPE=RELEASE ")
-os.system('make -j 9')
+    os.system('make -j 9')
+if("-m" in sys.argv):
+    os.system('make -j 9')
 executeString = './bin/milkyway_nbody -f ../milkywayathome_client/nbody/sample_workunits/for_developers.lua -o GPUBRUTE.out -z GPU.hist -b -i 4 1 .2 .2 12 .2' #>> GPUACCTEST.out'
 os.system(executeString)
 os.chdir('../milkywayathome_client')
