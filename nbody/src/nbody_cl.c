@@ -1305,20 +1305,20 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     
     // printf("BEGINNING TREE CONSTRUCTION\n");
     cl_event ev;
-    // err = clSetKernelArg(kernels->constructTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    // err = clSetKernelArg(kernels->constructTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
-    // err = clSetKernelArg(kernels->constructTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    // err = clEnqueueNDRangeKernel(ci->queue, constructTree, 1,
-    //                             0, global, NULL,
-    //                             0, NULL, &ev);
-    // if (err != CL_SUCCESS)
-    //     return err;
+    err = clSetKernelArg(kernels->constructTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
+    err = clSetKernelArg(kernels->constructTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->constructTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clEnqueueNDRangeKernel(ci->queue, constructTree, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
+    if (err != CL_SUCCESS)
+        return err;
 
-    // err = clEnqueueBarrier(ci->queue);
-    // if (err != CL_SUCCESS)
-    //     return err;
+    err = clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
-    // global[0] = st->effNBody;
+    global[0] = st->effNBody;
 
     err = clSetKernelArg(kernels->countOctNodes, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->countOctNodes, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
@@ -2618,28 +2618,28 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("TREE CONSTRUCTION:\n");
     printf("MORTON CODES:\n");
     printf("- - - - - - - - - - - - - - \n");
-    // for(int i = 0; i < st->effNBody; ++i){
+    for(int i = 0; i < st->effNBody; ++i){
+    //     printf("%d:\t", i);
+    //     // printBinary(gData.gpuTree[i].prefix);
+    //     printBinary(gData.mCodes[i]);
+    //     // printf("\t%d", gData.gpuTree[i].delta);
+    //     printf("   NODE: %d\tD: %d\tPARENT: %d\n", gData.nodeCounts[i], gData.gpuTree[i].delta, gData.gpuTree[i].parent);
     // //     printf("%d:\t", i);
-    // //     // printBinary(gData.gpuTree[i].prefix);
-    // //     printBinary(gData.mCodes[i]);
-    // //     // printf("\t%d", gData.gpuTree[i].delta);
-    // //     printf("   NODE: %d\tD: %d\tPARENT: %d\n", gData.nodeCounts[i], gData.gpuTree[i].delta, gData.gpuTree[i].parent);
-    // // //     printf("%d:\t", i);
-    //     printf("%d\n", gData.nodeCounts[i]);
-    // //     // printBinary(gData.mCodes[i]);
-    // // // //     printf(":\t");
-    // // // //     // printBinary(gData.gpuTree[i].prefix);
-    // // // //     printf("%d", gData.nodeCounts[i]);
-    // // //     printf("\n");
-    // // //     // if(gData.mCodes[i] > 0){
-    // // //     //     for(int j = i + 1; j < st->effNBody; ++j){
-    // // //     //         if(gData.mCodes[i] == gData.mCodes[j]){
-    // // //     //             printf("%d\n", gData.mCodes[i]);                    
-    // // //     //         }
-    // // //     //     }
-    // // //     // }
-    // }
-    // printf("----------------------------\n");
+        printf("%d\n", gData.nodeCounts[i]);
+    //     // printBinary(gData.mCodes[i]);
+    // // //     printf(":\t");
+    // // //     // printBinary(gData.gpuTree[i].prefix);
+    // // //     printf("%d", gData.nodeCounts[i]);
+    // //     printf("\n");
+    // //     // if(gData.mCodes[i] > 0){
+    // //     //     for(int j = i + 1; j < st->effNBody; ++j){
+    // //     //         if(gData.mCodes[i] == gData.mCodes[j]){
+    // //     //             printf("%d\n", gData.mCodes[i]);                    
+    // //     //         }
+    // //     //     }
+    // //     // }
+    }
+    printf("----------------------------\n");
     int octCount = gData.nodeCounts[st->effNBody - 1];
     printf("REQUIRED OCTREE NODES: %d\n", octCount);
     fflush(NULL);

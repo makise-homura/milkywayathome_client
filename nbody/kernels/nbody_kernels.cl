@@ -1703,18 +1703,15 @@ __kernel void countOctNodes(RVPtr x, RVPtr y, RVPtr z,
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    // if(g != 0){
-    //     // NVPtr node = &gpuBinaryTree[g];
-    //     uint delta = gpuBinaryTree[g].delta;
-    //     uint parentDelta = gpuBinaryTree[gpuBinaryTree[g].parent].delta;
-    //     nodeCounts[g] = delta/3 - parentDelta/3;
-    // }
-    // else{
-    //     nodeCounts[g] = 1;
-    // }
-
-    nodeCounts[g] = 1;
-    // nodeCounts[0] = 1;
+    if(g != 0){
+        // NVPtr node = &gpuBinaryTree[g];
+        uint delta = gpuBinaryTree[g].delta;
+        uint parentDelta = gpuBinaryTree[gpuBinaryTree[g].parent].delta;
+        nodeCounts[g] = delta/3 - parentDelta/3;
+    }
+    else{
+        nodeCounts[g] = 1;
+    }
 }
 
 #define STRIDE(iteration, offset) (1 << (iteration + offset))
