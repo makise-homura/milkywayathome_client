@@ -1714,6 +1714,12 @@ __kernel void countOctNodes(RVPtr x, RVPtr y, RVPtr z,
     }
 }
 
+__kernel void prefixSumInclusiveUtil(UVPtr nodeCounts, UVPtr swap){
+    uint g = (uint) get_global_id(0);
+    
+    swap[g] += nodeCounts[g];
+}
+
 #define STRIDE(iteration, offset) (1 << (iteration + offset))
 
 __kernel void prefixSumUpsweep(UVPtr nodeCounts, UVPtr iteration){
