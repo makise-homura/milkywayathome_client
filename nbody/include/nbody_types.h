@@ -208,8 +208,9 @@ typedef struct MW_ALIGN_TYPE
 
 typedef struct gpuNode{
     uint parent;
-    uint children[8];
-    uint leafIndex[8];
+    
+    int children[8];
+    int leafIndex[8];
 
     uint next;
     uint more;
@@ -227,6 +228,9 @@ typedef struct gpuNode{
     uint chid[2];
 
     uint pid;
+
+    real massEnclosed;
+    real com[3];
 
 }gpuNode;
 
@@ -251,6 +255,7 @@ typedef struct{
 
     cl_mem nodeCounts;
     cl_mem swap;
+
 
 }NBodyBuffers;
 
@@ -316,6 +321,7 @@ typedef struct
     cl_kernel prefixSumDownsweep;
     cl_kernel constructOctTree;
     cl_kernel linkOctree;
+    cl_kernel zeroBuffers;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;
 //     cl_kernel summarizationClear;
