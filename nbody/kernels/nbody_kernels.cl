@@ -1664,6 +1664,21 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
     int2 range = findRange(mCodes_G, EFFNBODY, g);
+    gpuBinaryTree[g].massEnclosed = 0;
+    gpuBinaryTree[g].com[0] = 0;
+    gpuBinaryTree[g].com[1] = 0;
+    gpuBinaryTree[g].com[2] = 0;
+    for(int i = range.x; i < range.y; ++i){
+        real com_[3] = {0};
+        gpuBinaryTree[g].massEnclosed += mass[i];
+        gpuBinaryTree[g].com[0] += mass[i] * x[i];
+        gpuBinaryTree[g].com[1] += mass[i] * y[i];
+        gpuBinaryTree[g].com[2] += mass[i] * z[i];
+    }
+    gpuBinaryTree[g].com[0] = gpuBinaryTree[g].com[0]/gpuBinaryTree[g].massEnclosed;
+    gpuBinaryTree[g].com[1] = gpuBinaryTree[g].com[1]/gpuBinaryTree[g].massEnclosed;
+    gpuBinaryTree[g].com[2] = gpuBinaryTree[g].com[2]/gpuBinaryTree[g].massEnclosed;
+
     int split = findSplit(mCodes_G, range.x, range.y);
 
     uint delta = clz(mCodes_G[split]^mCodes_G[split+1]) - 2;
