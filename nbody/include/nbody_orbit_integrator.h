@@ -33,6 +33,15 @@ void nbReverseOrbit(mwvector* finalPos,
                     real tstop,
                     real dt);
 
+
+void nbReverseOrbit2(mwvector* finalPos,
+                    mwvector* finalVel,
+                    const Potential* pot,
+                    mwvector pos,
+                    mwvector vel,
+                    real tstop,
+                    real dt);
+
 void nbPrintReverseOrbit(mwvector* finalPos,
                          mwvector* finalVel,
                          const Potential* pot,

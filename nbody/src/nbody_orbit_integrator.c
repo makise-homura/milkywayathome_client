@@ -64,7 +64,51 @@ void nbReverseOrbit(mwvector* finalPos,
 
     *finalPos = x;
     *finalVel = v;
+    mw_printf("%.15f\t%.15f\t%.15f\t%.15f\t %.15f\t%.15f\n", X(x), Y(x), Z(x), X(v), Y(v), Z(v));
 }
+
+void nbReverseOrbit2(mwvector* finalPos,
+                    mwvector* finalVel,
+                    const Potential* pot,
+                    mwvector pos,
+                    mwvector vel,
+                    real tstop,
+                    real dt)
+{
+    mwvector acc, v, x;
+    real t;
+    real dt_half = dt / 2.0;
+
+    // Set the initial conditions
+    x = pos;
+    v = vel;
+    mw_incnegv(v);
+    // Get the initial acceleration
+    acc = nbExtAcceleration(pot, x);
+
+    // Loop through time
+    for (t = 0; t <= tstop; t += dt)
+    {
+        
+        // Update the velocities and positions
+        mw_incaddv_s(v, acc, dt_half);
+        mw_incaddv_s(x, v, dt);
+        
+        acc = nbExtAcceleration(pot, x);
+        
+        mw_incaddv_s(v, acc, dt_half);
+        // Compute the new acceleration
+    }
+
+    /* Report the final values (don't forget to reverse the velocities) */
+    mw_incnegv(v);
+
+    *finalPos = x;
+    *finalVel = v;
+    mw_printf("%.15f\t%.15f\t%.15f\t%.15f\t %.15f\t%.15f\n", X(x), Y(x), Z(x), X(v), Y(v), Z(v));
+}
+
+
 
 void nbPrintReverseOrbit(mwvector* finalPos,
                          mwvector* finalVel,
