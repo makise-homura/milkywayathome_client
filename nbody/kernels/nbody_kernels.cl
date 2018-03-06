@@ -1900,9 +1900,53 @@ kernel void threadOctree(NVPtr octree){
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
 }
 
-kernel void zeroBuffers(UVPtr nodeCounts){
-    uint g = (uint) get_global_id;
+kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
+                        RVPtr vx, RVPtr vy, RVPtr vz,
+                        RVPtr ax, RVPtr ay, RVPtr az,
+                        RVPtr mass, RVPtr xMax, RVPtr yMax,
+                        RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
+                        NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts, NVPtr octree){
+
+    uint g = (uint) get_global_id(0);
+    if(g == 0){
+        *iteration = 0;
+    }
+    if(g < EFFNBODY){
+        xMin[g] = xMax[g] = x[g];
+        yMin[g] = yMax[g] = y[g];
+        zMin[g] = zMax[g] = z[g];
+    }
+    else{
+        xMin[g] = DBL_MAX;
+        yMin[g] = DBL_MAX;
+        zMin[g] = DBL_MAX;
+        xMax[g] = -DBL_MAX;
+        yMax[g] = -DBL_MAX;
+        zMax[g] = -DBL_MAX;
+    }
+
+    mCodes_G[g] = 0;
     nodeCounts[g] = 0;
+    octree[g].parent = gpuLeafs[g].parent = gpuBinaryTree[g].parent = 0;
+    octree[g].next = gpuLeafs[g].next = gpuBinaryTree[g].next = 0;
+    octree[g].more = gpuLeafs[g].more = gpuBinaryTree[g].more = 0;
+    octree[g].prefix = gpuLeafs[g].prefix = gpuBinaryTree[g].prefix = 0;
+    octree[g].delta = gpuLeafs[g].delta = gpuBinaryTree[g].delta = 0;
+    octree[g].treeLevel = gpuLeafs[g].treeLevel = gpuBinaryTree[g].treeLevel = 0;
+    octree[g].mortonCode = gpuLeafs[g].mortonCode = gpuBinaryTree[g].mortonCode = 0;
+    octree[g].id = gpuLeafs[g].id = gpuBinaryTree[g].id = 0;
+    // octree[g].chid = gpuLeafs[g].chid = gpuBinaryTree[g].chid = zeroTree[0].chid;
+    octree[g].pid = gpuLeafs[g].pid = gpuBinaryTree[g].pid = 0;
+    octree[g].massEnclosed = gpuLeafs[g].massEnclosed = gpuBinaryTree[g].massEnclosed = 0;
+
+    for(int i = 0; i < 8; ++i){
+        octree[g].children[i] = gpuLeafs[g].children[i] = gpuBinaryTree[g].children[i] = 0;
+        octree[g].leafIndex[i] = gpuLeafs[g].leafIndex[i] = gpuBinaryTree[g].leafIndex[i] = 0;
+    }
+    for(int i = 0; i < 3; ++i){
+        octree[g].com[i] = gpuLeafs[g].com[i] = gpuBinaryTree[g].com[i] = 0;
+    }
 }
 
 kernel void computeNodeStats(RVPtr x, RVPtr y, RVPtr z,

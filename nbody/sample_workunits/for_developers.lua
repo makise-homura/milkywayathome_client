@@ -17,7 +17,7 @@
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
 -- -- -- -- -- -- -- -- -- STANDARD  SETTINGS   -- -- -- -- -- -- -- -- -- --        
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-totalBodies           = 32000 -- -- NUMBER OF BODIES           -- --
+totalBodies           = 32 -- -- NUMBER OF BODIES           -- --
 nbodyLikelihoodMethod = "EMD"   -- -- HIST COMPARE METHOD        -- --
 nbodyMinVersion       = "1.64"  -- -- MINIMUM APP VERSION        -- --
 
@@ -50,7 +50,7 @@ best_like_start      = 0.5    -- what percent of sim to start
 use_vel_disps        = false    -- use velocity dispersions in likelihood
         
 timestep_control     = true   -- -- control number of steps    -- --
-Ntime_steps          = 1     -- -- number of timesteps to run -- --
+Ntime_steps          = 2     -- -- number of timesteps to run -- --
 
 -- -- -- -- -- -- -- -- -- DWARF STARTING LOCATION   -- -- -- -- -- -- -- --
 l  = 218

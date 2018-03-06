@@ -253,6 +253,8 @@ typedef struct{
 
     cl_mem gpuOctree;
 
+    cl_mem zeroTree;
+
     cl_mem nodeCounts;
     cl_mem swap;
 
