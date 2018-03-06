@@ -1814,6 +1814,10 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
                 octree[index + i].treeLevel = gpuBinaryTree[g].delta/3 - (count - 1 - i);
                 octree[index + i].id = index + i;
                 octree[index + i].prefix = mCodes_G[g] >> (30 - (3 * octree[index + i].treeLevel));
+                octree[index + i].com[0] = gpuBinaryTree[g].com[0];
+                octree[index + i].com[1] = gpuBinaryTree[g].com[1];
+                octree[index + i].com[2] = gpuBinaryTree[g].com[2];
+                octree[index + i].massEnclosed = gpuBinaryTree[g].massEnclosed;
                 if(i > 0){
                     octree[index + i].parent = index + i - 1;
                     uint childIndex = extractBits(octree[index + i].prefix, 0);
@@ -1849,6 +1853,11 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
         for(int j = 0; j < 8; ++j){
             octree[g].leafIndex[j] = -1;    
         }
+
+        octree[g].massEnclosed = gpuBinaryTree[0].massEnclosed;
+        octree[g].com[0] = gpuBinaryTree[0].com[0];
+        octree[g].com[1] = gpuBinaryTree[0].com[1];
+        octree[g].com[2] = gpuBinaryTree[0].com[2];
     }
 }
 
@@ -1882,6 +1891,10 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
         }
         ++chunkLevel;
     }
+}
+
+kernel void threadOctree(NVPtr octree){
+    
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){

@@ -707,6 +707,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->prefixSumInclusiveUtil = mwCreateKernel(program, "prefixSumInclusiveUtil");
     kernels->constructOctTree = mwCreateKernel(program, "constructOctTree");
     kernels->linkOctree = mwCreateKernel(program, "linkOctree");
+    kernels->threadOctree = mwCreateKernel(program, "threadOctree");
     kernels->zeroBuffers = mwCreateKernel(program, "zeroBuffers");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
@@ -728,6 +729,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
             &&  kernels->constructTree
             &&  kernels->countOctNodes
             &&  kernels->linkOctree
+            &&  kernels->threadOctree
             &&  kernels->zeroBuffers
             &&  kernels->forceCalculation
             &&  kernels->forceCalculationExact
@@ -1427,6 +1429,12 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
                                 0, NULL, &ev);
 
 
+    err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
+
+
     err = clSetKernelArg(kernels->zeroBuffers, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->zeroBuffers, 1,
                                 0, global, NULL,
@@ -1589,6 +1597,13 @@ static cl_int _nbReleaseBuffers(NBodyBuffers* nbb)
 
     }
     err |= clReleaseMemObject_quiet(nbb->mass);
+    err |= clReleaseMemObject_quiet(nbb->mCodes);
+    err |= clReleaseMemObject_quiet(nbb->iteration);
+    err |= clReleaseMemObject_quiet(nbb->gpuTree);
+    err |= clReleaseMemObject_quiet(nbb->gpuLeafs);
+    err |= clReleaseMemObject_quiet(nbb->gpuOctree);
+    err |= clReleaseMemObject_quiet(nbb->nodeCounts);
+    err |= clReleaseMemObject_quiet(nbb->swap);
 
     if (err != CL_SUCCESS)
     {
