@@ -507,6 +507,7 @@ cl_int nbReleaseKernels(NBodyState* st)
     err |= clReleaseKernel_quiet(kernels->constructOctTree);
     err |= clReleaseKernel_quiet(kernels->linkOctree);
     err |= clReleaseKernel_quiet(kernels->threadOctree);
+    err |= clReleaseKernel_quiet(kernels->forceCalculationTreecode);
     err |= clReleaseKernel_quiet(kernels->zeroBuffers);
 
 //     err |= clReleaseKernel_quiet(kernels->buildTreeClear);
@@ -515,7 +516,6 @@ cl_int nbReleaseKernels(NBodyState* st)
 //     err |= clReleaseKernel_quiet(kernels->summarization);
 //     err |= clReleaseKernel_quiet(kernels->quadMoments);
 //     err |= clReleaseKernel_quiet(kernels->sort);
-     err |= clReleaseKernel_quiet(kernels->forceCalculation);
      err |= clReleaseKernel_quiet(kernels->forceCalculationExact);
      err |= clReleaseKernel_quiet(kernels->advancePosition);
      err |= clReleaseKernel_quiet(kernels->advanceHalfVelocity);
@@ -716,6 +716,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->constructOctTree = mwCreateKernel(program, "constructOctTree");
     kernels->linkOctree = mwCreateKernel(program, "linkOctree");
     kernels->threadOctree = mwCreateKernel(program, "threadOctree");
+    kernels->forceCalculationTreecode = mwCreateKernel(program, "forceCalculationTreecode");
     kernels->zeroBuffers = mwCreateKernel(program, "zeroBuffers");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
@@ -723,7 +724,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
 //     kernels->summarization = mwCreateKernel(program, "summarization");
 //     kernels->quadMoments = mwCreateKernel(program, "quadMoments");
 //     kernels->sort = mwCreateKernel(program, "sort");
-    kernels->forceCalculation = mwCreateKernel(program, "forceCalculation");
+    // kernels->forceCalculation = mwCreateKernel(program, "forceCalculation");
     //kernels->integration = mwCreateKernel(program, "integration");
     kernels->forceCalculationExact = mwCreateKernel(program, "forceCalculationExact");
     kernels->advanceHalfVelocity = mwCreateKernel(program, "advanceHalfVelocity");
@@ -738,8 +739,8 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
             &&  kernels->countOctNodes
             &&  kernels->linkOctree
             &&  kernels->threadOctree
+            &&  kernels->forceCalculationTreecode
             &&  kernels->zeroBuffers
-            &&  kernels->forceCalculation
             &&  kernels->forceCalculationExact
             &&  kernels->advanceHalfVelocity
             &&  kernels->advancePosition);
@@ -1071,7 +1072,7 @@ static cl_int nbExecuteForceKernels(NBodyState* st, cl_bool updateState)
     }
     else
     {
-        forceKern = kernels->forceCalculation;
+        forceKern = kernels->forceCalculationTreecode;
         global[0] = st->effNBody;
         local[0] = ws->local[0];
     }
@@ -1501,6 +1502,43 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     free(nC);
     return CL_SUCCESS;
 }
+
+
+
+static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
+{
+    cl_int err; 
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event encodeEv;
+    cl_kernel constructTree;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+    global[0] = st->effNBody;
+    local[0] = ws->local[0];
+    cl_event ev;
+
+    //CLEAR TREE BUFFERS:
+    err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->pos, 0);
+    err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->vel, 3);
+    err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->acc, 6);
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->mass));
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->forceCalculationTreecode, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
+}
+
+
+
+
 
 //NOTE: NOT NEEDED
 // static NBodyStatus nbCheckpointCL(const NBodyCtx* ctx, NBodyState* st)
@@ -2789,6 +2827,12 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         // printDebugStatus(ctx, st, &gData);        
         // printf("STEP: %d\n", st->step);
         // readGPUBuffers(st, &gData);
+
+        // err = nbForceCalculationTreecode(st, CL_TRUE);
+        // if(err != CL_SUCCESS){
+        //     mwPerrorCL(err, "Error executing force calculation kernel");
+        //     return NBODY_CL_ERROR;
+        // }
 
         if(st->step < ctx->nStep - 1){
             err = nbClearBuffers(st, CL_TRUE);

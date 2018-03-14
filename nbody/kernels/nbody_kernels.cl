@@ -1909,6 +1909,32 @@ kernel void threadOctree(NVPtr octree){
     }
 }
 
+kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
+                                        RVPtr vx, RVPtr vy, RVPtr vz,
+                                        RVPtr ax, RVPtr ay, RVPtr az,
+                                        RVPtr mass, NVPtr octree){
+    uint g = (uint) get_global_id(0);
+    uint currentIndex = g;
+
+    //Sum to bodies in current cell
+    currentIndex = octree[g].parent;
+    for(int i = 0; i < 8; ++i){
+        //Calculate acceleration
+    }
+    //Sum to all other bodies
+    while(currentIndex != g){
+        currentIndex = octree[currentIndex].next;
+        //while distance is less than rcrit:
+            //currentIndex = octree[currentIndex].more
+        //Calculate acceleration
+
+        ////////////
+        break;
+        ////////////
+    }
+
+}
+
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
 }
 

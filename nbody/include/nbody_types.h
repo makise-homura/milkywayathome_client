@@ -324,6 +324,7 @@ typedef struct
     cl_kernel constructOctTree;
     cl_kernel linkOctree;
     cl_kernel threadOctree;
+    cl_kernel forceCalculationTreecode;
     cl_kernel zeroBuffers;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;
