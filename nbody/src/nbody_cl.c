@@ -1803,115 +1803,6 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
         st->nbb->swap = mwCreateZeroReadWriteBuffer(ci, n* sizeof(uint32_t));
     }
 
-    // gpuNode zeroNode;
-    // zeroNode.parent = 0;
-    // zeroNode.next = 0;
-    // zeroNode.more = 0;
-    // zeroNode.prefix = 0;
-    // zeroNode.delta = 0;
-    // zeroNode.treeLevel = 0;
-    // zeroNode.mortonCode = 0;
-    // zeroNode.id = 0;
-    // zeroNode.pid = 0;
-    // zeroNode.massEnclosed = 0;
-
-    // for(int i = 0; i < 8; ++i){
-    //     zeroNode.children[i] = 0;
-    //     zeroNode.leafIndex[i] = 0;
-    // }
-    // for(int i = 0; i < 3; ++i){
-    //     zeroNode.com[i] = 0;
-    // }
-
-    // st->nbb->input = clCreateBuffer(st->ci->clctx, CL_MEM_READ_ONLY, buffSize*sizeof(gpuTree), NULL, NULL);
-    // st->nbb->output = clCreateBuffer(st->ci->clctx, CL_MEM_WRITE_ONLY, buffSize*sizeof(gpuTree), NULL, NULL);
-    // st->nbb->input = mwCreateZeroReadWriteBuffer(ci, buffSize*sizeof(gpuTree));
-    // st->nbb->output = mwCreateZeroReadWriteBuffer(ci, buffSize*sizeof(gpuTree));
-    //const int nDummy = sizeof(nbb->dummy) / sizeof(nbb->dummy[0]);
-    // for (i = 0; i < 3; ++i)
-    // {
-    //     // nbb->pos[i] = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
-    //     // nbb->vel[i] = mwCreateZeroReadWriteBuffer(ci, st->effNBody * sizeof(real));
-    //     // nbb->acc[i] = mwCreateZeroReadWriteBuffer(ci, st->effNBody * sizeof(real));
-
-    //     // if (!nbb->pos[i] || !nbb->vel[i] || !nbb->acc[i])
-    //     // {
-    //     //     return MW_CL_ERROR;
-    //     // }
-    //     /*if (ctx->criterion != Exact)
-    //     {
-    //         nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, ci->di.maxCompUnits * sizeof(real));
-    //         nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, ci->di.maxCompUnits * sizeof(real));
-    //         if (!nbb->min[i] || !nbb->max[i])
-    //         {
-    //             return MW_CL_ERROR;
-    //         }
-    //     }*/
-
-    //     if (ctx->useQuad)
-    //     {
-    //         // nbb->quad.xx = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
-    //         // nbb->quad.xy = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
-    //         // nbb->quad.xz = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
-
-    //         // nbb->quad.yy = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
-    //         // nbb->quad.yz = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
-
-    //         // nbb->quad.zz = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
-    //         // if (!nbb->quad.xx || !nbb->quad.xy || !nbb->quad.xz || !nbb->quad.yy || !nbb->quad.yz || !nbb->quad.zz)
-    //         // {
-    //         //     return MW_CL_ERROR;
-    //         // }
-
-    //     }
-    // }
-
-    //massSize = st->usesExact ? st->effNBody * sizeof(real) : (nNode + 1) * sizeof(real);
-    // nbb->mass = mwCreateZeroReadWriteBuffer(ci, massSize);
-    // if (!nbb->mass)false
-    // {
-    //     return MW_CL_ERROR;
-    // }
-
-    /*nbb->treeStatus = mwCreateZeroReadWriteBuffer(ci, sizeof(TreeStatus));
-    if (!nbb->treeStatus)
-    {
-        return MW_CL_ERROR;
-    }
-
-    for (j = 0; j < nDummy; ++j)
-    {
-        nbb->dummy[j] = clCreateBuffer(ci->clctx, CL_MEM_READ_ONLY, 1, NULL, &err);
-        if (!nbb->dummy[j])
-        {
-            return MW_CL_ERROR;
-        }
-    }*/
-
-    /* If we are doing an exact Nbody, we don't need the rest */
-//     if (ctx->criterion != Exact)
-//     {
-//         nbb->start = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(cl_int));
-//         nbb->count = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(cl_int));
-//         nbb->sort = mwCreateZeroReadWriteBuffer(ci, st->effNBody * sizeof(cl_int));
-//         nbb->child = mwCreateZeroReadWriteBuffer(ci, NSUB * (nNode + 1) * sizeof(cl_int));
-// 
-//         if (!nbb->start || !nbb->count || !nbb->sort || !nbb->child)
-//         {
-//             return MW_CL_ERROR;
-//         }
-// 
-//         if (ctx->criterion == SW93 || ctx->criterion == NewCriterion)
-//         {
-//             /* This only is for cells, so we could subtract nbody if we wanted */
-//             nbb->critRadii = mwCreateZeroReadWriteBuffer(ci, (nNode + 1) * sizeof(real));
-//             if (!nbb->critRadii)
-//             {
-//                 return MW_CL_ERROR;
-//             }
-//         }
-//    }
-
     return CL_SUCCESS;
 }
 
@@ -2291,145 +2182,6 @@ static cl_int nbDebugSummarization(const NBodyCtx* ctx, NBodyState* st)
     return CL_SUCCESS;
 }
 
-// void fillGPUTreeOnlyBodies(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT)
-// {
-//   for(int i = 0; i < st->effNBody; ++i){
-//     if(i < st->nbody){
-//       gpT[i].isBody = 1;
-//       gpT[i].pos[0] = st->bodytab[i].bodynode.pos.x;
-//       gpT[i].pos[1] = st->bodytab[i].bodynode.pos.y;
-//       gpT[i].pos[2] = st->bodytab[i].bodynode.pos.z;
-//       gpT[i].bodyID = st->bodytab[i].bodynode.bodyID;
-//       gpT[i].mass = st->bodytab[i].bodynode.mass;
-//       gpT[i].vel[0] = st->bodytab[i].vel.x;
-//       gpT[i].vel[1] = st->bodytab[i].vel.y;
-//       gpT[i].vel[2] = st->bodytab[i].vel.z;
-//       gpT[i].acc[0] = 0;
-//       gpT[i].acc[1] = 0;
-//       gpT[i].acc[2] = 0;
-//     }
-//     else{
-//       gpT[i].isBody = 0;
-//       gpT[i].pos[0] = 0;
-//       gpT[i].pos[1] = 0;
-//       gpT[i].pos[2] = 0;
-//       gpT[i].bodyID = -1;
-//       gpT[i].mass = 0;
-//       gpT[i].vel[0] = 0;
-//       gpT[i].vel[1] = 0;
-//       gpT[i].vel[2] = 0;
-//       gpT[i].acc[0] = 0;
-//       gpT[i].acc[1] = 0;
-//       gpT[i].acc[2] = 0;
-//     }
-//   }
-// }
-// void fillGPUTree(const NBodyCtx* ctx, NBodyState* st, gpuTree* gpT){
-//     //Create gpu tree array:
-//     //Fill TreeArray:
-//     const NBodyNode* q = (const NBodyNode*) st->tree.root; /* Start at the root */
-//     unsigned int n = 0; //Start at initial index
-//     const Body* p = NULL;
-//     //printf("%i\n", st->tree.cellUsed);
-    
-//     while(q != NULL){
-//         mwvector pos;
-//         pos = Pos(q);
-//         gpT[n].pos[0] = pos.x;
-//         gpT[n].pos[1] = pos.y;
-//         gpT[n].pos[2] = pos.z;
-//         gpT[n].mass = q->mass; //Set mass
-//         //printf("%f\n", gpT[n].mass);
-        
-//         if(isBody(q)){ //Check if q is a body
-//             p = q;
-//             //#ifdef DEBUG
-//               gpT[n].bodyID = p->bodynode.bodyID;
-              
-//             //#endif
-//             gpT[n].vel[0] = p->vel.x;
-//             gpT[n].vel[1] = p->vel.y;
-//             gpT[n].vel[2] = p->vel.z;
-//             gpT[n].acc[0] = 0;
-//             gpT[n].acc[1] = 0;
-//             gpT[n].acc[2] = 0;
-//             gpT[n].isBody = 1; //Flag as body
-//             gpT[n].more = 0; //Bodies do not have (more) indices.
-//             if(Next(q) != NULL){
-//                 gpT[n].next = n+1; //The next index will be our immediate neighbor
-//             }
-//             else{
-//                 gpT[n].next = 0;
-//             }
-//             q = Next(q); //If we are in a body, we can't go deeper, have to go next
-//         }
-//         else{   //If q is not a body, it must be a cell
-            
-//             gpT[n].isBody = 0; //Flag as not body
-//             if(ctx->useQuad){ //If using quad, calculate quad moments
-//                 gpT[n].quad.xx = Quad(q).xx;
-//                 gpT[n].quad.xy = Quad(q).xy;
-//                 gpT[n].quad.xz = Quad(q).xz;
-//                 gpT[n].quad.yy = Quad(q).yy;
-//                 gpT[n].quad.yz = Quad(q).yz;
-//                 gpT[n].quad.zz = Quad(q).zz;
-//             }
-//             else{ //Otherwise initialize to -1
-//                 gpT[n].quad.xx = -1;
-//                 gpT[n].quad.xy = -1;
-//                 gpT[n].quad.xz = -1;
-//                 gpT[n].quad.yy = -1;
-//                 gpT[n].quad.yz = -1;
-//                 gpT[n].quad.zz = -1;
-//             }
-            
-//             //Set next index
-//             unsigned int numChild = 0;
-//             if(Next(q) != NULL){
-//                 const NBodyNode* w = q; //Start at current cell to find out how many children it has
-//                 while(w != Next(q) && w != NULL)
-//                 {
-//                     while(!isBody(w)) //Follow tree to bottom
-//                     {
-//                         ++numChild;
-//                         w = More(w);
-//                     }
-//                     ++numChild;
-//                     w  = Next(w); //Traverse tree until we get to Next(q), adding children as we go
-//                 }
-//                 gpT[n].next = n + 1 + numChild; //Now we know what the Next() index will be
-//             }
-//             else{ //If there is no next pointer, we point it back to the root
-//                 gpT[n].next = 0;
-//             }
-//             gpT[n].more = n + 1;
-//             if(More(q) == NULL){
-//                 printf("Interesting:\n");
-//             }
-//             if(gpT[n].more > (st->nbody)){
-//                 printf("OOPS M8: %i\n", gpT[n].more);
-//             }
-//             q = More(q); //If we are in a cell, we must go deeper
-//         }
-        
-//         ++n; //Increment our index
-//         //printf("%i \n", n);
-//     }
-//     while(n <  st->effNBody){ //FILL EMPTY GPU TREE SPOTS:
-//       gpT[n].mass = 0;
-//       gpT[n].bodyID = -1;
-//       gpT[n].isBody = 0;
-//       gpT[n].vel[0] = 0;
-//       gpT[n].vel[1] = 0;
-//       gpT[n].vel[2] = 0;
-//       gpT[n].acc[0] = 0;
-//       gpT[n].acc[1] = 0;
-//       gpT[n].acc[2] = 0;
-//       gpT[n].more = 0;
-//       ++n;
-//     }
-// }
-
 void initGPUDataArrays(NBodyState* st, gpuData* gData){
   int n = st->effNBody;
   for(int i = 0; i < 3; ++i){
@@ -2781,13 +2533,13 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     int n = st->effNBody;
 
     //BEGIN TIMING
-    struct timeval start[5], end[5];
+    struct timeval start[6], end[6];
     // sleep(1);
     writeGPUBuffers(st, &gData);
 
 
     //HANDLE RUNNING BOUNDING BOX HERE:
-    gettimeofday(&start[4], NULL);
+    gettimeofday(&start[5], NULL);
     while(st->step < ctx->nStep){
         
         gettimeofday(&start[0], NULL);
@@ -2824,15 +2576,17 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         }
         gettimeofday(&end[3], NULL);
 
-        // printDebugStatus(ctx, st, &gData);        
+        // printDebugStatus(ctx, st, &gData);
         // printf("STEP: %d\n", st->step);
         // readGPUBuffers(st, &gData);
 
-        // err = nbForceCalculationTreecode(st, CL_TRUE);
-        // if(err != CL_SUCCESS){
-        //     mwPerrorCL(err, "Error executing force calculation kernel");
-        //     return NBODY_CL_ERROR;
-        // }
+        gettimeofday(&start[4], NULL);
+        err = nbForceCalculationTreecode(st, CL_TRUE);
+        if(err != CL_SUCCESS){
+            mwPerrorCL(err, "Error executing force calculation kernel");
+            return NBODY_CL_ERROR;
+        }
+        gettimeofday(&end[4], NULL);
 
         if(st->step < ctx->nStep - 1){
             err = nbClearBuffers(st, CL_TRUE);
@@ -2843,17 +2597,9 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         }
         ++st->step;
     }
-    gettimeofday(&end[4], NULL);
+    gettimeofday(&end[5], NULL);
     readGPUBuffers(st, &gData);
-    // printDebugStatus(ctx, st, &gData);        
-    
-
-    // for(int j = 0; j < st->effNBody; ++j){
-    //   printf("%.3f | %.3f | %.3f\n", gData.max[0][j], gData.max[1][j], gData.max[2][j]);
-    // }
-    // real startT, endT;
-    // startT = (real)start.tv_sec + (1.0/1000000) * start.tv_usec;
-    // endT = (real)end.tv_sec + (1.0/1000000) * end.tv_usec;
+    // printDebugStatus(ctx, st, &gData);
 
     printf("==============================\n");
     printf("BOUNDING BOX EXECUTION TIME:\n");
@@ -2884,9 +2630,16 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     fflush(NULL);
 
     printf("==============================\n");
-    printf("TOTAL EXECUTION TIME:\n");
+    printf("FORCE CALCULATION EXECUTION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
     printf("%.4f ms\n", (((real)end[4].tv_sec + (real)end[4].tv_usec * (1.0/1000000)) - ((real)start[4].tv_sec + (real)start[4].tv_usec * (1.0/1000000))) * 1000);
+    printf("==============================\n");
+    fflush(NULL);
+
+    printf("==============================\n");
+    printf("TOTAL EXECUTION TIME:\n");
+    // printf("%.4f ms\n", (endT - startT) * 1000);
+    printf("%.4f ms\n", (((real)end[5].tv_sec + (real)end[5].tv_usec * (1.0/1000000)) - ((real)start[5].tv_sec + (real)start[5].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
 
@@ -2898,51 +2651,10 @@ NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
     return NBODY_SUCCESS;
 }
 
-// NBodyStatus nbStripBodies(NBodyState* st, gpuTree* gpuData){ //Function to strip bodies out of GPU Tree
-//     int n = st->effNBody;
-//     int j = 0;
-//     int minimumBID = n;
-//     for(int i = 0; i < n; ++i){
-//         if(gpuData[i].isBody == 1){
-//            // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 
-//            // gpuData[i].bodyID, gpuData[i].acc[0], gpuData[i].acc[1], gpuData[i].acc[2]);
-//           // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n", 
-//           // gpuData[i].bodyID, gpuData[i].vel[0], gpuData[i].vel[1], gpuData[i].vel[2]);
-//           // printf("BODY ID: %d, POSITION: %f,%f,%f\n", 
-//           // gpuData[i].bodyID, gpuData[i].pos[0], gpuData[i].pos[1], gpuData[i].pos[2]);
-//           st->bodytab[j].bodynode.pos.x = gpuData[i].pos[0];
-//           st->bodytab[j].bodynode.pos.y = gpuData[i].pos[1];
-//           st->bodytab[j].bodynode.pos.z = gpuData[i].pos[2];
-//           st->bodytab[j].bodynode.bodyID = gpuData[i].bodyID;
-//           st->bodytab[j].bodynode.mass = gpuData[i].mass;
-//           st->bodytab[j].vel.x = gpuData[i].vel[0];
-//           st->bodytab[j].vel.y = gpuData[i].vel[1];
-//           st->bodytab[j].vel.z = gpuData[i].vel[2];
-//            ++j;
-//           if(gpuData[i].bodyID < minimumBID){
-//             minimumBID = gpuData[i].bodyID;
-//           }
-//         }
-//     }
-//     printf("MinValue: %d\n", minimumBID);
-// }
-
 NBodyStatus nbStripBodiesSoA(NBodyState* st, gpuData* gData){ //Function to strip bodies out of GPU Tree
   printf("STRIPPING BODIES FROM BUFFER STRUCTURE\n");
   int n = st->effNBody;
   for(int i = 0; i < n; ++i){
-    // printf("BODY ID: %d, ACCELERATION: %.15f,%.15f,%.15f\n", 
-    //   i, gData->acc[0][i], gData->acc[1][i], gData->acc[2][i]);
-    // printf("BODY ID: %d, VELOCITY: %.15f,%.15f,%.15f\n", 
-    //   i, gData->vel[0], gData->vel[1], gData->vel[2]);
-    // printf("BODY ID: %d, POSITION: %.15f,%.15f,%.15f\n", 
-    //   i, gData->pos[0][i], gData->pos[1][i], gData->pos[2][i]);
-    // printf("BODY ID: %d, MASS: %.15f\n", 
-    //   i, gData->mass[i]);
-    // printf("BODY ID: %d, VELOCITY: %f,%f,%f\n", 
-    // gpuData[i].bodyID, gpuData[i].vel[0], gpuData[i].vel[1], gpuData[i].vel[2]);
-    // printf("BODY ID: %d, POSITION: %f,%f,%f\n", 
-    // gpuData[i].bodyID, gpuData[i].pos[0], gpuData[i].pos[1], gpuData[i].pos[2]);
     if(i < st->nbody){
         st->bodytab[i].bodynode.pos.x = gData->pos[0][i];
         st->bodytab[i].bodynode.pos.y = gData->pos[1][i];
