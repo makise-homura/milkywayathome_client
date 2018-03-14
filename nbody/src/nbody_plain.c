@@ -234,9 +234,10 @@ NBodyStatus nbStepSystemPlain(const NBodyCtx* ctx, NBodyState* st)
 
     advancePosVel(st, st->nbody, dt);
 
-    rc = nbGravMap(ctx, st);
     advanceVelocities(st, st->nbody, dt);
 
+    rc = nbGravMap(ctx, st);
+    
     st->step++;
     #ifdef NBODY_BLENDER_OUTPUT
         blenderPrintBodies(st, ctx);

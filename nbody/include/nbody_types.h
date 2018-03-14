@@ -343,8 +343,6 @@ typedef struct
     cl_kernel forceCalculationExact;
 } NBodyKernels;
 
-#endif /* NBODY_OPENCL */
-
 
 //////////////////////////////////////////
 //Dynamic GPU Array for calculation data
@@ -371,6 +369,7 @@ typedef struct
 
 }gpuData;
 
+#endif /* NBODY_OPENCL */
 // typedef struct
 // {
 //     // gpuTree *data; //Create an array of gpuVec structs to push to GPU

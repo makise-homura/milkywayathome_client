@@ -1471,32 +1471,32 @@ __kernel void bitonicMortonSort(RVPtr x, RVPtr y, RVPtr z,
     uint j = g | inc;
     
     //Create local variables and copy global data into them:
-    uint iData[8] = {mCodes_G[g], x[g], y[g], z[g], vx[g], vy[g], vz[g], mass[g]};
+    real iDataR[7] = {x[g], y[g], z[g], vx[g], vy[g], vz[g], mass[g]};
     uint iKey = mCodes_G[g];//iData[0]; //getKey(iData);
-    uint jData[8] = {mCodes_G[j], x[j], y[j], z[j], vx[j], vy[j], vz[j], mass[j]};
-    uint jKey = jData[0]; //getKey(jData);
+    real jDataR[7] = {x[j], y[j], z[j], vx[j], vy[j], vz[j], mass[j]};
+    uint jKey = mCodes_G[j]; //getKey(jData);
 
     bool smaller = (jKey < iKey) || (jKey == iKey && j < g);
     bool swap = smaller ^ (j < g) ^ (((len<<1) & g) != 0);
     // barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE);
     if(swap){
-        mCodes_G[g] = jData[0];
-        x[g] = jData[1];
-        y[g] = jData[2];
-        z[g] = jData[3];
-        vx[g] = jData[4];
-        vy[g] = jData[5];
-        vz[g] = jData[6];
-        mass[g] = jData[7];
+        mCodes_G[g] = jKey;
+        x[g] = jDataR[0];
+        y[g] = jDataR[1];
+        z[g] = jDataR[2];
+        vx[g] = jDataR[3];
+        vy[g] = jDataR[4];
+        vz[g] = jDataR[5];
+        mass[g] = jDataR[6];
 
-        mCodes_G[j] = iData[0];
-        x[j] = iData[1];
-        y[j] = iData[2];
-        z[j] = iData[3];
-        vx[j] = iData[4];
-        vy[j] = iData[5];
-        vz[j] = iData[6];
-        mass[j] = iData[7];
+        mCodes_G[j] = iKey;
+        x[j] = iDataR[0];
+        y[j] = iDataR[1];
+        z[j] = iDataR[2];
+        vx[j] = iDataR[3];
+        vy[j] = iDataR[4];
+        vz[j] = iDataR[5];
+        mass[j] = iDataR[6];
         
     }
 }
@@ -1514,9 +1514,7 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
 
 
   __private real4 pos_local;
-  __local uint mCodes_L[WARPSIZE];
- 
-
+  
   pos_local.x = (x[g] - xMin[0])/(xMax[0]-xMin[0]);
   pos_local.y = (y[g] - yMin[0])/(yMax[0]-yMin[0]);
   pos_local.z = (z[g] - zMin[0])/(zMax[0]-zMin[0]);
@@ -1894,7 +1892,6 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
 }
 
 kernel void threadOctree(NVPtr octree){
-    
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
@@ -1912,7 +1909,7 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
     if(g == 0){
         *iteration = 0;
     }
-    if(g < EFFNBODY){
+    if(g < NBODY){
         xMin[g] = xMax[g] = x[g];
         yMin[g] = yMax[g] = y[g];
         zMin[g] = zMax[g] = z[g];
@@ -1928,6 +1925,9 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
 
     mCodes_G[g] = 0;
     nodeCounts[g] = 0;
+    ax[g] = 0;
+    ay[g] = 0;
+    az[g] = 0;
     octree[g].parent = gpuLeafs[g].parent = gpuBinaryTree[g].parent = 0;
     octree[g].next = gpuLeafs[g].next = gpuBinaryTree[g].next = 0;
     octree[g].more = gpuLeafs[g].more = gpuBinaryTree[g].more = 0;
@@ -1936,7 +1936,6 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
     octree[g].treeLevel = gpuLeafs[g].treeLevel = gpuBinaryTree[g].treeLevel = 0;
     octree[g].mortonCode = gpuLeafs[g].mortonCode = gpuBinaryTree[g].mortonCode = 0;
     octree[g].id = gpuLeafs[g].id = gpuBinaryTree[g].id = 0;
-    // octree[g].chid = gpuLeafs[g].chid = gpuBinaryTree[g].chid = zeroTree[0].chid;
     octree[g].pid = gpuLeafs[g].pid = gpuBinaryTree[g].pid = 0;
     octree[g].massEnclosed = gpuLeafs[g].massEnclosed = gpuBinaryTree[g].massEnclosed = 0;
 

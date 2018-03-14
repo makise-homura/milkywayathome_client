@@ -2614,19 +2614,18 @@ NBodyStatus nbRunSystemCLExact(const NBodyCtx* ctx, NBodyState* st){
         mwPerrorCL(err, "Error executing advance position kernel");
         return NBODY_CL_ERROR;
     }
-    err = nbExecuteForceKernels(st, CL_TRUE);
-    if (err != CL_SUCCESS)
-    {
-        mwPerrorCL(err, "Error executing advance position kernel");
-        return NBODY_CL_ERROR;
-    }
     err = nbAdvanceHalfVelocity(st, CL_TRUE);
     if (err != CL_SUCCESS)
     {
         mwPerrorCL(err, "Error executing half velocity kernel");
         return NBODY_CL_ERROR;
     }
-
+    err = nbExecuteForceKernels(st, CL_TRUE);
+    if (err != CL_SUCCESS)
+    {
+        mwPerrorCL(err, "Error executing advance position kernel");
+        return NBODY_CL_ERROR;
+    }
     // printf("%d<<<<<<<<<<<<<<<<\n", ctx->BestLikeStart);
     if(st->step / ctx->nStep >= ctx->BestLikeStart && ctx->useBestLike)
     {
@@ -2656,14 +2655,25 @@ void printBinary(uint32_t input){
     }
 }
 
-void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData gData){
-    readGPUBuffers(st, &gData);
+void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
+    printf("\n\n===================\n");
+    printf("      STEP %d\n", st->step);
+    printf("===================\n");
+    readGPUBuffers(st, gData);
+    printf("----------------------------\n");
+    printf("BODIES: \n");
+    printf("----------------------------\n");
+    for(int i = 0; i < st->effNBody; ++i){
+        if(i < st->nbody){
+            printf("%f, %f, %f\n", gData->pos[0][i], gData->pos[1][i], gData->pos[2][i]);
+        }
+    }
     printf("----------------------------\n");
     printf("BOUNDING BOX:\n");
     printf("        X        Y       Z\n");
     printf("----------------------------\n");
-    printf("MAX: %.2f | %.2f | %.2f\nMIN: %.2f | %.2f | %.2f\n", gData.max[0][0], gData.max[1][0], gData.max[2][0],
-                                                gData.min[0][0], gData.min[1][0], gData.min[2][0]);
+    printf("MAX: %.2f | %.2f | %.2f\nMIN: %.2f | %.2f | %.2f\n", gData->max[0][0], gData->max[1][0], gData->max[2][0],
+                                                gData->min[0][0], gData->min[1][0], gData->min[2][0]);
     printf("----------------------------\n");
     fflush(NULL);
 
@@ -2671,59 +2681,33 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData gData){
     printf("TREE CONSTRUCTION:\n");
     printf("MORTON CODES:\n");
     printf("- - - - - - - - - - - - - - \n");
-
-    int debug = 1;
-
-    if(debug == 1){
-        for(int i = 0; i < st->effNBody; ++i){
-        //     printf("%d:\t", i);
-        //     // printBinary(gData.gpuTree[i].prefix);
-            printBinary(gData.mCodes[i]);
-            
-        //     // printf("\t%d", gData.gpuTree[i].delta);
-        //     printf("   NODE: %d\tD: %d\tPARENT: %d\n", gData.nodeCounts[i], gData.gpuTree[i].delta, gData.gpuTree[i].parent);
-        // //     printf("%d:\t", i);
-            // printf("\t%d\tD: %d", gData.nodeCounts[i], gData.gpuTree[i].delta);
-            // printf("%d", gData.nodeCounts[i]);
-            printf("\n");
-        //     // printBinary(gData.mCodes[i]);
-        // // //     printf(":\t");
-        // // //     // printBinary(gData.gpuTree[i].prefix);
-        // // //     printf("%d", gData.nodeCounts[i]);
-        // //     printf("\n");
-        // //     // if(gData.mCodes[i] > 0){
-        // //     //     for(int j = i + 1; j < st->effNBody; ++j){
-        // //     //         if(gData.mCodes[i] == gData.mCodes[j]){
-        // //     //             printf("%d\n", gData.mCodes[i]);                    
-        // //     //         }
-        // //     //     }
-        // //     // }
-        }
+    for(int i = 0; i < st->effNBody; ++i){
+        printBinary(gData->mCodes[i]);
+        printf("\n");
     }
     printf("----------------------------\n");
-    int octCount = gData.nodeCounts[st->effNBody - 1] + 1;
+
+
+    int octCount = gData->nodeCounts[st->effNBody - 1] + 1;
     printf("REQUIRED OCTREE NODES: %d\n", octCount);
     fflush(NULL);
     printf("----------------------------\n");
     printf("GPU OCTREE:\n");
     int count[10] = {0};
-
         for(int i = 0; i < octCount; ++i){
-            ++count[gData.gpuOctree[i].treeLevel];       
-            if(debug == 1){
-                printBinary(gData.gpuOctree[i].prefix); 
-                printf("\tID: %d\tL: %d\tD: %d\tP: %d\tC:", gData.gpuOctree[i].id, gData.gpuOctree[i].treeLevel, gData.gpuOctree[i].delta, gData.gpuOctree[i].parent);
+            ++count[gData->gpuOctree[i].treeLevel];
+            printBinary(gData->gpuOctree[i].prefix); 
+            printf("\tID: %d\tL: %d\tD: %d\tP: %d\tC:", gData->gpuOctree[i].id, gData->gpuOctree[i].treeLevel, gData->gpuOctree[i].delta, gData->gpuOctree[i].parent);
 
-                for(int j = 0; j < 8; ++j){
-                    if(gData.gpuOctree[i].children[j] != 0){
-                        printf("(%d)\t", gData.gpuOctree[i].children[j]);
-                    }
-                    else if(gData.gpuOctree[i].leafIndex[j] != -1){
-                        printf(" %d \t", gData.gpuOctree[i].leafIndex[j]);
-                    }
-                    else{
-                        printf(" - \t");
-                    }
+            for(int j = 0; j < 8; ++j){
+                if(gData->gpuOctree[i].children[j] != 0){
+                    printf("(%d)\t", gData->gpuOctree[i].children[j]);
+                }
+                else if(gData->gpuOctree[i].leafIndex[j] != -1){
+                    printf(" %d \t", gData->gpuOctree[i].leafIndex[j]);
+                }
+                else{
+                    printf(" - \t");
                 }
                 printf("\n");
             }
@@ -2733,6 +2717,14 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData gData){
     printf("LEVEL INFORMATION:\n");
     for(int i = 0; i < 10; ++i){
         printf("Level %d: %d\n", i, count[i]);
+    }
+}
+
+void printDebugBodies(const NBodyCtx* ctx, NBodyState* st, gpuData gData){
+    for(int i = 0; i < st->effNBody; ++i){
+        if(i < st->nbody){
+            printf("%f, %f, %f\n", gData.pos[0][i], gData.pos[1][i], gData.pos[2][i]);
+        }
     }
 }
 
@@ -2793,13 +2785,13 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         }
         gettimeofday(&end[3], NULL);
 
-        printDebugStatus(ctx, st, gData);
+        printDebugStatus(ctx, st, &gData);
 
-        // err = nbClearBuffers(st, CL_TRUE);
-        // if(err != CL_SUCCESS){
-        //     mwPerrorCL(err, "Error executing buffer clearing kernel");
-        //     return NBODY_CL_ERROR;
-        // }
+        err = nbClearBuffers(st, CL_TRUE);
+        if(err != CL_SUCCESS){
+            mwPerrorCL(err, "Error executing buffer clearing kernel");
+            return NBODY_CL_ERROR;
+        }
         ++st->step;
     }
 
