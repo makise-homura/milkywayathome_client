@@ -1851,7 +1851,7 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration, UVPtr bodyParents,
                         NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts, NVPtr octree){
 
 
@@ -1871,6 +1871,7 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
         }
         else{
             octree[index].leafIndex[currentChunk] = g;
+            
             leafFound = 1;
         }
         ++chunkLevel;
@@ -1912,7 +1913,7 @@ kernel void threadOctree(NVPtr octree){
 kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
                                         RVPtr vx, RVPtr vy, RVPtr vz,
                                         RVPtr ax, RVPtr ay, RVPtr az,
-                                        RVPtr mass, NVPtr octree){
+                                        RVPtr mass, UVPtr bodyParents, NVPtr octree){
     uint g = (uint) get_global_id(0);
     uint currentIndex = g;
 
@@ -1943,7 +1944,7 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration, UVPtr bodyParents,
                         NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts, NVPtr octree, UVPtr swap){
 
     uint g = (uint) get_global_id(0);
@@ -1967,6 +1968,7 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
     mCodes_G[g] = 0;
     nodeCounts[g] = 0;
     swap[g] = 0;
+    bodyParents[g] = 0;
     ax[g] = 0;
     ay[g] = 0;
     az[g] = 0;

@@ -244,6 +244,8 @@ typedef struct{
     cl_mem max[3];
     cl_mem min[3];
 
+    cl_mem bodyParents;
+
     cl_mem mCodes;
     cl_mem iteration;
 

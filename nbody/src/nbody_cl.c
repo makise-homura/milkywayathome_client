@@ -1316,11 +1316,12 @@ static cl_int nbClearBuffers(NBodyState* st, cl_bool updateState)
     cl_event ev;
 
     //CLEAR TREE BUFFERS:
-    err |= clSetKernelArg(kernels->zeroBuffers, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err |= clSetKernelArg(kernels->zeroBuffers, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
-    err |= clSetKernelArg(kernels->zeroBuffers, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err |= clSetKernelArg(kernels->zeroBuffers, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    err |= clSetKernelArg(kernels->zeroBuffers, 22, sizeof(cl_mem), &(st->nbb->swap));
+    err |= clSetKernelArg(kernels->zeroBuffers, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
+    err |= clSetKernelArg(kernels->zeroBuffers, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
+    err |= clSetKernelArg(kernels->zeroBuffers, 20, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err |= clSetKernelArg(kernels->zeroBuffers, 21, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err |= clSetKernelArg(kernels->zeroBuffers, 22, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err |= clSetKernelArg(kernels->zeroBuffers, 23, sizeof(cl_mem), &(st->nbb->swap));
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->zeroBuffers, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
@@ -1471,10 +1472,11 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     // NODE COUNTS:
         
     global[0] = nC[st->effNBody - 1];
-    err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
-    err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
+    err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
+    err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clSetKernelArg(kernels->linkOctree, 22, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
@@ -1525,12 +1527,12 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     local[0] = ws->local[0];
     cl_event ev;
 
-    //CLEAR TREE BUFFERS:
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->pos, 0);
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->vel, 3);
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->acc, 6);
-    err |= clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->mass));
-    err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err = clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->bodyParents));        
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->mass));
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 11, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->forceCalculationTreecode, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
@@ -1788,6 +1790,7 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
     }
     st->nbb->mass = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
     if(!st->usesExact){
+        st->nbb->bodyParents = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->mCodes = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->iteration = mwCreateZeroReadWriteBuffer(ci, sizeof(uint32_t));
         st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
