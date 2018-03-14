@@ -364,6 +364,7 @@ typedef struct
     real* min[3];
 
     uint32_t* mCodes;
+    uint32_t* bodyParents;
     uint32_t* iteration;
     uint32_t* nodeCounts;
     

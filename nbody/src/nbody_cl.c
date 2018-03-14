@@ -1471,7 +1471,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
         
     // NODE COUNTS:
         
-    global[0] = nC[st->effNBody - 1];
+    global[0] = st->effNBody;
     err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
     err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->gpuLeafs));
@@ -1482,6 +1482,8 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
                                 0, NULL, &ev);
 
 
+
+    global[0] = nC[st->effNBody - 1]
     err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
                                 0, global, NULL,
@@ -1530,7 +1532,7 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->pos, 0);
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->vel, 3);
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->acc, 6);
-    err = clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->bodyParents));        
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->bodyParents));        
     err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->mass));
     err |= clSetKernelArg(kernels->forceCalculationTreecode, 11, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->forceCalculationTreecode, 1,
@@ -1696,6 +1698,7 @@ static cl_int _nbReleaseBuffers(NBodyBuffers* nbb)
     err |= clReleaseMemObject_quiet(nbb->gpuOctree);
     err |= clReleaseMemObject_quiet(nbb->nodeCounts);
     err |= clReleaseMemObject_quiet(nbb->swap);
+    err |= clReleaseMemObject_quiet(nbb->bodyParents);
 
     if (err != CL_SUCCESS)
     {
@@ -2198,6 +2201,7 @@ void initGPUDataArrays(NBodyState* st, gpuData* gData){
   }
   gData->mass = calloc(n, sizeof(real));
   gData->mCodes = calloc(n, sizeof(uint32_t));
+  gData->bodyParents = calloc(n, sizeof(uint32_t));
   gData->gpuTree = calloc(n, sizeof(gpuNode));
   gData->gpuOctree = calloc(n, sizeof(gpuNode));
   gData->nodeCounts = calloc(n, sizeof(uint32_t));
@@ -2344,6 +2348,12 @@ void readGPUBuffers(NBodyState* st, gpuData* gData){
                             CL_TRUE,
                             0, n*sizeof(uint32_t), gData->mCodes,
                             0, NULL, NULL);
+    
+    err |= clEnqueueReadBuffer(st->ci->queue,
+                            st->nbb->bodyParents,
+                            CL_TRUE,
+                            0, n * sizeof(uint), gData->bodyParents,
+                            0, NULL, NULL);
 
     err |= clEnqueueReadBuffer(st->ci->queue,
                             st->nbb->gpuTree,
@@ -2458,7 +2468,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
     printf("----------------------------\n");
     for(int i = 0; i < st->effNBody; ++i){
         if(i < st->nbody){
-            printf("%f, %f, %f\n", gData->pos[0][i], gData->pos[1][i], gData->pos[2][i]);
+            printf("(%f, %f, %f)\n", gData->pos[0][i], gData->pos[1][i], gData->pos[2][i]);
         }
     }
     printf("----------------------------\n");
@@ -2476,6 +2486,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
     printf("- - - - - - - - - - - - - - \n");
     for(int i = 0; i < st->effNBody; ++i){
         printBinary(gData->mCodes[i]);
+        printf("\t PARENT: %d", gData->bodyParents[i]);
         printf("\n");
     }
     printf("----------------------------\n");
@@ -2601,8 +2612,8 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         ++st->step;
     }
     gettimeofday(&end[5], NULL);
-    readGPUBuffers(st, &gData);
-    // printDebugStatus(ctx, st, &gData);
+    // readGPUBuffers(st, &gData);
+    printDebugStatus(ctx, st, &gData);
 
     printf("==============================\n");
     printf("BOUNDING BOX EXECUTION TIME:\n");

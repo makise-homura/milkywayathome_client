@@ -1871,7 +1871,12 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
         }
         else{
             octree[index].leafIndex[currentChunk] = g;
-            
+            int i = 0;
+            while(mCodes_G[g] == mCodes_G[g + i]){
+                bodyParents[g + i] = index;
+                ++i;
+            }
+            octree[index].children[currentChunk] = -i;
             leafFound = 1;
         }
         ++chunkLevel;
