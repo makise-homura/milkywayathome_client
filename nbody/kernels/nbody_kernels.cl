@@ -239,6 +239,7 @@ struct node;
 typedef struct
 {
     uint parent;
+    
     int children[8];
     int leafIndex[8];
 
@@ -1636,21 +1637,6 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    // gpuLeafs[g].mass = &(mass[g]);
-    // gpuLeafs[g].x = &(x[g]);
-    // gpuLeafs[g].y = &(y[g]);
-    // gpuLeafs[g].z = &(z[g]);
-    // gpuLeafs[g].vx = &(vx[g]);
-    // gpuLeafs[g].vy = &(vy[g]);
-    // gpuLeafs[g].vz = &(vz[g]);
-
-    // gpuLeafs[g].prefix = mCodes_G[g];
-    // gpuLeafs[g].prefix >>= 1;
-    // gpuLeafs[g].prefix <<= 1;
-    // gpuLeafs[g].id = 100 + g;
-    // gpuLeafs[g].isLeaf = 1;
-
-    
     gpuLeafs[g].id = g;
     gpuBinaryTree[g].id = g;
     
@@ -1903,7 +1889,7 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
                         RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
-                        NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts, NVPtr octree){
+                        NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts, NVPtr octree, UVPtr swap){
 
     uint g = (uint) get_global_id(0);
     if(g == 0){
@@ -1925,6 +1911,7 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
 
     mCodes_G[g] = 0;
     nodeCounts[g] = 0;
+    swap[g] = 0;
     ax[g] = 0;
     ay[g] = 0;
     az[g] = 0;

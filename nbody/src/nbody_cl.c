@@ -1190,7 +1190,7 @@ static cl_int nbBoundingBox(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     int iterations = ceil(log(st->effNBody)/log(local[0]));
-    printf("ITERATIONS: %d\n", iterations);
+    // printf("ITERATIONS: %d\n", iterations);
     
     cl_event ev;
     for(int i = 0; i < iterations; ++i){
@@ -1231,9 +1231,9 @@ static cl_int nbBitonicMortonSort(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody/2;
     local[0] = ws->local[0]/2;
     // local[0] = (global[0] % local[0] == 0)?ws->local[0]:ws->local[0]/2;
-    printf("EFFNBODY: %d\n", st->effNBody);
-    printf("GLOBAL WORKGROUP SIZE: %d\n", global[0]);
-    printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
+    // printf("EFFNBODY: %d\n", st->effNBody);
+    // printf("GLOBAL WORKGROUP SIZE: %d\n", global[0]);
+    // printf("LOCAL WORKGROUP SIZE: %d\n", local[0]);
     
     cl_event ev;
 
@@ -1281,7 +1281,7 @@ static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody;
     local[0] = ws->local[0];
     
-    printf("BEGINNING TREE ENCODING\n");
+    // printf("BEGINNING TREE ENCODING\n");
     cl_event ev;
     err = clEnqueueNDRangeKernel(ci->queue, encodeTree, 1,
                                 0, global, local,
@@ -1290,7 +1290,7 @@ static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
         return err;
 
     clFinish(ci->queue);
-    printf("COMPLETED TREE ENCODING\n");
+    // printf("COMPLETED TREE ENCODING\n");
     return CL_SUCCESS;
 }
 
@@ -1315,10 +1315,11 @@ static cl_int nbClearBuffers(NBodyState* st, cl_bool updateState)
     cl_event ev;
 
     //CLEAR TREE BUFFERS:
-    err = clSetKernelArg(kernels->zeroBuffers, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err = clSetKernelArg(kernels->zeroBuffers, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
-    err = clSetKernelArg(kernels->zeroBuffers, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err = clSetKernelArg(kernels->zeroBuffers, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err |= clSetKernelArg(kernels->zeroBuffers, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
+    err |= clSetKernelArg(kernels->zeroBuffers, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err |= clSetKernelArg(kernels->zeroBuffers, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err |= clSetKernelArg(kernels->zeroBuffers, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err |= clSetKernelArg(kernels->zeroBuffers, 22, sizeof(cl_mem), &(st->nbb->swap));
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->zeroBuffers, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
@@ -1349,7 +1350,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     //     return err;
 
     clFinish(ci->queue);
-    printf("NODE COUNTS:\n");
+    // printf("NODE COUNTS:\n");
     
 
     // printf("BEGINNING TREE CONSTRUCTION\n");
@@ -1378,61 +1379,61 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     return err;
 
 
-    // // STORE NODE COUNTS FOR INCLUSIVE PREFIX SUM:
-    // err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    // err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->swap));
-    // err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
-    //     0, global, NULL,
-    //     0, NULL, &ev);
+    // STORE NODE COUNTS FOR INCLUSIVE PREFIX SUM:
+    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->swap));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
+        0, global, NULL,
+        0, NULL, &ev);
         
-    // if(err != CL_SUCCESS)
-    //     return err;
+    if(err != CL_SUCCESS)
+        return err;
 
 
-    // // PREFIX SUM UPSWEEP:
+    // PREFIX SUM UPSWEEP:
 
-    // uint *value = 0;
-    // err |= clEnqueueWriteBuffer(st->ci->queue,
-    //                         st->nbb->iteration,
-    //                         CL_TRUE,
-    //                         0, sizeof(uint), value,
-    //                         0, NULL, NULL);
-    // err = clSetKernelArg(kernels->prefixSumUpsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    // err = clSetKernelArg(kernels->prefixSumUpsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
-    // for(int i = 0; i < log2(st->effNBody); ++i){
-    //     global[0] = st->effNBody >> (i + 1);
-    //     err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumUpsweep, 1,
-    //                                 0, global, NULL,
-    //                                 0, NULL, &ev);
-    //     if (err != CL_SUCCESS)
-    //     return err;
-    // }
+    uint *value = 0;
+    err |= clEnqueueWriteBuffer(st->ci->queue,
+                            st->nbb->iteration,
+                            CL_TRUE,
+                            0, sizeof(uint), value,
+                            0, NULL, NULL);
+    err = clSetKernelArg(kernels->prefixSumUpsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clSetKernelArg(kernels->prefixSumUpsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
+    for(int i = 0; i < log2(st->effNBody); ++i){
+        global[0] = st->effNBody >> (i + 1);
+        err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumUpsweep, 1,
+                                    0, global, NULL,
+                                    0, NULL, &ev);
+        if (err != CL_SUCCESS)
+        return err;
+    }
 
 
-    // //PREFIX SUM DOWNSWEEP:
-    // err = clSetKernelArg(kernels->prefixSumDownsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    // err = clSetKernelArg(kernels->prefixSumDownsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
-    // for(int i = 0; i < log2(st->effNBody); ++i){
-    //     global[0] = 1 << (i);
-    //     // printf("%d\n", global[0]);
-    //     err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumDownsweep, 1,
-    //                                 0, global, NULL,
-    //                                 0, NULL, &ev);
-    //     if (err != CL_SUCCESS)
-    //     return err;
-    // }
+    //PREFIX SUM DOWNSWEEP:
+    err = clSetKernelArg(kernels->prefixSumDownsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clSetKernelArg(kernels->prefixSumDownsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
+    for(int i = 0; i < log2(st->effNBody); ++i){
+        global[0] = 1 << (i);
+        // printf("%d\n", global[0]);
+        err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumDownsweep, 1,
+                                    0, global, NULL,
+                                    0, NULL, &ev);
+        if (err != CL_SUCCESS)
+        return err;
+    }
 
     
-    // // ADD STORED NODE COUNTS FOR INCLUSIVE PREFIX SUM:
-    // global[0] = st->effNBody;
-    // err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    // err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->swap));
-    // err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
-    //     0, global, NULL,
-    //     0, NULL, &ev);
+    // ADD STORED NODE COUNTS FOR INCLUSIVE PREFIX SUM:
+    global[0] = st->effNBody;
+    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->swap));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
+        0, global, NULL,
+        0, NULL, &ev);
         
-    // if(err != CL_SUCCESS)
-    //     return err;
+    if(err != CL_SUCCESS)
+        return err;
 
 
 
@@ -1446,30 +1447,29 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     err |= clEnqueueBarrier(ci->queue);
     if (err != CL_SUCCESS)
         return err;
-    // nC[st->effNBody - 1] += 1; //Add one to account for root node
+    nC[st->effNBody - 1] += 1; //Add one to account for root node
     
     
     // printf("%d<<<<<<<<<<<<<<<<<<\n", nC[st->effNBody - 1]);
     
-    // //THIS IS THE PROBLEM HERE:
-    // global[0] = st->effNBody - 1;
-    // err = clSetKernelArg(kernels->constructOctTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    // err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
-    // err = clSetKernelArg(kernels->constructOctTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    // err = clSetKernelArg(kernels->constructOctTree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    // err = clEnqueueNDRangeKernel(ci->queue, kernels->constructOctTree, 1,
-    //                             0, global, NULL,
-    //                             0, NULL, &ev);
+    //THIS IS THE PROBLEM HERE:
+    global[0] = st->effNBody - 1;
+    err = clSetKernelArg(kernels->constructOctTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
+    err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->constructOctTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clSetKernelArg(kernels->constructOctTree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err = clEnqueueNDRangeKernel(ci->queue, kernels->constructOctTree, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
 
-    // err = clEnqueueBarrier(ci->queue);
-    // if (err != CL_SUCCESS)
-    //     return err;
-// NODE COUNTS:
-                            
+    err = clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
-    
-    // global[0] = nC[st->effNBody - 1];
-    // // printf("GLOBAL %d <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n", global[0]);
+        
+    // NODE COUNTS:
+        
+    global[0] = nC[st->effNBody - 1];
     // err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     // err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
     // err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1479,25 +1479,25 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     //                             0, NULL, &ev);
 
 
-    // err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    // err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
-    //                             0, global, NULL,
-    //                             0, NULL, &ev);
+    err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
 
 
 
-    // err |= clEnqueueBarrier(ci->queue);
-    // if (err != CL_SUCCESS)
-    //     return err;
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
     clFinish(ci->queue);
-    printf("NODE COUNTS:\n");
-    for(int i = 0; i < st->effNBody; ++i){
-        printf("%d\n", nC[i]);
-    }
-    printf("=========================\n");
+    // printf("NODE COUNTS:\n");
+    // for(int i = 0; i < st->effNBody; ++i){
+    //     printf("%d\n", nC[i]);
+    // }
+    // printf("=========================\n");
 
-    printf("COMPLETED TREE CONSTRUCTION\n");
+    // printf("COMPLETED TREE CONSTRUCTION\n");
     free(nC);
     return CL_SUCCESS;
 }
@@ -2709,8 +2709,8 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
                 else{
                     printf(" - \t");
                 }
-                printf("\n");
             }
+            printf("\n");
         }
 
     printf("---------------------------\n");
@@ -2738,19 +2738,20 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     cl_uint i;
     cl_command_queue q = st->ci->queue;
     gpuData gData;
-    // gpuTree* gTree;
     initGPUDataArrays(st, &gData);
     fillGPUDataOnlyBodies(st, &gData);
     int n = st->effNBody;
 
     //BEGIN TIMING
-    struct timeval start[4], end[4];
+    struct timeval start[5], end[5];
     // sleep(1);
     writeGPUBuffers(st, &gData);
 
 
     //HANDLE RUNNING BOUNDING BOX HERE:
+    gettimeofday(&start[4], NULL);
     while(st->step < ctx->nStep){
+        
         gettimeofday(&start[0], NULL);
         err = nbBoundingBox(st, CL_TRUE);
         if (err != CL_SUCCESS)
@@ -2759,7 +2760,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
             return NBODY_CL_ERROR;
         }
         gettimeofday(&end[0], NULL);
-        
+
         gettimeofday(&start[1], NULL);
         //RUN TREE CONSTRUCTION KERNEL:
         err = nbEncodeTree(st, CL_TRUE);
@@ -2785,7 +2786,9 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         }
         gettimeofday(&end[3], NULL);
 
-        printDebugStatus(ctx, st, &gData);
+        // printDebugStatus(ctx, st, &gData);        
+        // printf("STEP: %d\n", st->step);
+        // readGPUBuffers(st, &gData);
 
         err = nbClearBuffers(st, CL_TRUE);
         if(err != CL_SUCCESS){
@@ -2794,8 +2797,8 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         }
         ++st->step;
     }
-
-    readGPUBuffers(st, &gData);
+    gettimeofday(&end[4], NULL);
+    // readGPUBuffers(st, &gData);
     
 
     // for(int j = 0; j < st->effNBody; ++j){
@@ -2830,6 +2833,13 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("TREE CONSTRUCTION EXECUTION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
     printf("%.4f ms\n", (((real)end[3].tv_sec + (real)end[3].tv_usec * (1.0/1000000)) - ((real)start[3].tv_sec + (real)start[3].tv_usec * (1.0/1000000))) * 1000);
+    printf("==============================\n");
+    fflush(NULL);
+
+    printf("==============================\n");
+    printf("TOTAL EXECUTION TIME:\n");
+    // printf("%.4f ms\n", (endT - startT) * 1000);
+    printf("%.4f ms\n", (((real)end[4].tv_sec + (real)end[4].tv_usec * (1.0/1000000)) - ((real)start[4].tv_sec + (real)start[4].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
 
