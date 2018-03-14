@@ -1878,6 +1878,35 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
 }
 
 kernel void threadOctree(NVPtr octree){
+    uint g = (uint) get_global_id(0);
+
+    uint chunk = extractBits(octree[g].mortonCode, 9 - octree[g].treeLevel);
+    int nextFound = 0;
+
+    uint parentNodeIndex = octree[g].parent;
+    uint parentTreeLevel = octree[octree[g].parent].treeLevel;
+    for(int i = 0; i < 8; ++i){
+        if(octree[g].children[i] != 0){
+            octree[g].more = octree[g].children[i];
+        }
+    }
+    while(nextFound != 1){
+        for(int i = chunk + 1; i < 8; ++i){
+            if(octree[parentNodeIndex].children[i] != 0 && nextFound != 1){
+                octree[g].next = octree[octree[g].parent].children[i];
+                nextFound = 1;
+            }
+        }
+        if(parentNodeIndex == 0){
+            uint currentIndex = 0;
+            while(octree[currentIndex].treeLevel != parentTreeLevel){
+                currentIndex = octree[currentIndex].more;
+            }
+            nextFound = 1;
+        }
+        chunk = extractBits(octree[parentNodeIndex].mortonCode, 9 - octree[parentNodeIndex].treeLevel);
+        parentNodeIndex = octree[parentNodeIndex].parent;
+    }
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
@@ -1928,7 +1957,7 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
 
     for(int i = 0; i < 8; ++i){
         octree[g].children[i] = gpuLeafs[g].children[i] = gpuBinaryTree[g].children[i] = 0;
-        octree[g].leafIndex[i] = gpuLeafs[g].leafIndex[i] = gpuBinaryTree[g].leafIndex[i] = 0;
+        octree[g].leafIndex[i] = gpuLeafs[g].leafIndex[i] = gpuBinaryTree[g].leafIndex[i] = -1;
     }
     for(int i = 0; i < 3; ++i){
         octree[g].com[i] = gpuLeafs[g].com[i] = gpuBinaryTree[g].com[i] = 0;

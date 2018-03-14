@@ -1470,13 +1470,13 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     // NODE COUNTS:
         
     global[0] = nC[st->effNBody - 1];
-    // err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    // err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
-    // err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    // err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    // err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
-    //                             0, global, NULL,
-    //                             0, NULL, &ev);
+    err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
+    err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
 
 
     err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
@@ -2790,15 +2790,18 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         // printf("STEP: %d\n", st->step);
         // readGPUBuffers(st, &gData);
 
-        err = nbClearBuffers(st, CL_TRUE);
-        if(err != CL_SUCCESS){
-            mwPerrorCL(err, "Error executing buffer clearing kernel");
-            return NBODY_CL_ERROR;
+        if(st->step < ctx->nStep - 1){
+            err = nbClearBuffers(st, CL_TRUE);
+            if(err != CL_SUCCESS){
+                mwPerrorCL(err, "Error executing buffer clearing kernel");
+                return NBODY_CL_ERROR;
+            }
         }
         ++st->step;
     }
     gettimeofday(&end[4], NULL);
-    // readGPUBuffers(st, &gData);
+    readGPUBuffers(st, &gData);
+    // printDebugStatus(ctx, st, &gData);        
     
 
     // for(int j = 0; j < st->effNBody; ++j){
