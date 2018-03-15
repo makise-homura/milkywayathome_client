@@ -1902,16 +1902,13 @@ kernel void threadOctree(NVPtr octree){
     if(g != 0){
         while(nextFound != 1){
             for(int i = chunk + 1; i < 8; ++i){
-                if(octree[parentNodeIndex].children[i] != 0 && nextFound != 1){
-                    octree[g].next = octree[octree[g].parent].children[i];
+                if(octree[parentNodeIndex].children[i] > 0 && nextFound != 1){
+                    octree[g].next = octree[parentNodeIndex].children[i];
                     nextFound = 1;
                 }
             }
             if(parentNodeIndex == 0){
-                uint currentIndex = 0;
-                while(octree[currentIndex].treeLevel != parentTreeLevel){
-                    currentIndex = octree[currentIndex].more;
-                }
+                octree[g].next = 0;
                 nextFound = 1;
             }
             chunk = extractBits(octree[parentNodeIndex].prefix, 0);
