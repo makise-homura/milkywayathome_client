@@ -457,6 +457,7 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
         err |= nbSetKernelArguments(k->constructOctTree, st->nbb, exact);
         err |= nbSetKernelArguments(k->linkOctree, st->nbb, exact);
         err |= nbSetKernelArguments(k->zeroBuffers, st->nbb, exact);
+        err |= nbSetKernelArguments(k->computeNodeStats, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -718,6 +719,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->threadOctree = mwCreateKernel(program, "threadOctree");
     kernels->forceCalculationTreecode = mwCreateKernel(program, "forceCalculationTreecode");
     kernels->zeroBuffers = mwCreateKernel(program, "zeroBuffers");
+    kernels->computeNodeStats = mwCreateKernel(program, "computeNodeStats");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
 //     kernels->summarizationClear = mwCreateKernel(program, "summarizationClear");
@@ -741,6 +743,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
             &&  kernels->threadOctree
             &&  kernels->forceCalculationTreecode
             &&  kernels->zeroBuffers
+            &&  kernels->computeNodeStats
             &&  kernels->forceCalculationExact
             &&  kernels->advanceHalfVelocity
             &&  kernels->advancePosition);
@@ -1484,6 +1487,12 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
 
     global[0] = nC[st->effNBody - 1];
+    err = clSetKernelArg(kernels->computeNodeStats, 18, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    err = clEnqueueNDRangeKernel(ci->queue, kernels->computeNodeStats, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
+
+
     err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
                                 0, global, NULL,
@@ -1532,8 +1541,8 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->pos, 0);
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->vel, 3);
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->acc, 6);
-    err |= clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->bodyParents));        
-    err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->mass));
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->mass));        
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->bodyParents));
     err |= clSetKernelArg(kernels->forceCalculationTreecode, 11, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->forceCalculationTreecode, 1,
                                 0, global, NULL,
@@ -2486,7 +2495,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
     printf("- - - - - - - - - - - - - - \n");
     for(int i = 0; i < st->effNBody; ++i){
         printBinary(gData->mCodes[i]);
-        printf("\t PARENT: %d", gData->bodyParents[i]);
+        printf("\t PARENT: %d\t", gData->bodyParents[i]);
         printf("\n");
     }
     printf("----------------------------\n");
@@ -2501,7 +2510,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
         for(int i = 0; i < octCount; ++i){
             ++count[gData->gpuOctree[i].treeLevel];
             printBinary(gData->gpuOctree[i].prefix); 
-            printf("\tID: %d\tN: %d\tM: %d\tP: %d\tC:", gData->gpuOctree[i].id, gData->gpuOctree[i].next, gData->gpuOctree[i].more, gData->gpuOctree[i].parent);
+            printf("\tID: %d\tR: %.2f\t ME: %.2f\tCOM: (%.2f, %.2f, %.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->gpuOctree[i].id, gData->gpuOctree[i].radius, gData->gpuOctree[i].massEnclosed, gData->gpuOctree[i].com[0], gData->gpuOctree[i].com[1], gData->gpuOctree[i].com[2], gData->gpuOctree[i].next, gData->gpuOctree[i].more, gData->gpuOctree[i].parent);
 
             for(int j = 0; j < 8; ++j){
                 if(gData->gpuOctree[i].children[j] > 0){

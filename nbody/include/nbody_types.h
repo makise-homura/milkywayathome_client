@@ -229,6 +229,9 @@ typedef struct gpuNode{
 
     uint pid;
 
+    real radius;
+    real rCrit2;
+
     real massEnclosed;
     real com[3];
 
@@ -328,6 +331,7 @@ typedef struct
     cl_kernel threadOctree;
     cl_kernel forceCalculationTreecode;
     cl_kernel zeroBuffers;
+    cl_kernel computeNodeStats;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;
 //     cl_kernel summarizationClear;

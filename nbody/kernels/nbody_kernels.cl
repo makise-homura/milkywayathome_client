@@ -260,6 +260,9 @@ typedef struct
 
     uint pid;
 
+    real radius;
+    real rCrit2;
+
     real massEnclosed;
     real com[3];
     
@@ -1648,10 +1651,10 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
     int2 range = findRange(mCodes_G, EFFNBODY, g);
-    gpuBinaryTree[g].massEnclosed = 0;
-    gpuBinaryTree[g].com[0] = 0;
-    gpuBinaryTree[g].com[1] = 0;
-    gpuBinaryTree[g].com[2] = 0;
+    gpuBinaryTree[g].massEnclosed = mass[g];
+    gpuBinaryTree[g].com[0] = mass[g] * x[g];
+    gpuBinaryTree[g].com[1] = mass[g] * y[g];
+    gpuBinaryTree[g].com[2] = mass[g] * z[g];
     for(int i = range.x; i < range.y; ++i){
         real com_[3] = {0};
         gpuBinaryTree[g].massEnclosed += mass[i];
@@ -2008,10 +2011,17 @@ kernel void computeNodeStats(RVPtr x, RVPtr y, RVPtr z,
                                 RVPtr mass, RVPtr xMax, RVPtr yMax,
                                 RVPtr zMax, RVPtr xMin, RVPtr yMin,
                                 RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
-                                NVPtr gpuBinaryTree, NVPtr gpuLeafs, UVPtr nodeCounts, NVPtr octree){
+                                NVPtr octree){
     
     uint g = (uint) get_global_id(0);
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
+
+    real dx = (xMax[0] - xMin[0])/2;
+    real dy = (yMax[0] - yMin[0])/2;
+    real dz = (zMax[0] - zMin[0])/2;
+
+    //rCrit = 
+    octree[g].radius = sqrt(dx*dx + dy*dy + dz*dz)/(1 <<  octree[g].treeLevel);
 
 }
