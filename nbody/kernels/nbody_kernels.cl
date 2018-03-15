@@ -1886,32 +1886,37 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
 kernel void threadOctree(NVPtr octree){
     uint g = (uint) get_global_id(0);
 
-    uint chunk = extractBits(octree[g].mortonCode, 9 - octree[g].treeLevel);
+    uint chunk = extractBits(octree[g].prefix, 0);
     int nextFound = 0;
 
     uint parentNodeIndex = octree[g].parent;
     uint parentTreeLevel = octree[octree[g].parent].treeLevel;
     for(int i = 0; i < 8; ++i){
-        if(octree[g].children[i] != 0){
+        if(octree[g].children[i] > 0){
             octree[g].more = octree[g].children[i];
+            break;
         }
     }
-    while(nextFound != 1){
-        for(int i = chunk + 1; i < 8; ++i){
-            if(octree[parentNodeIndex].children[i] != 0 && nextFound != 1){
-                octree[g].next = octree[octree[g].parent].children[i];
+
+    // octree[g].next = chunk;
+    if(g != 0){
+        while(nextFound != 1){
+            for(int i = chunk + 1; i < 8; ++i){
+                if(octree[parentNodeIndex].children[i] != 0 && nextFound != 1){
+                    octree[g].next = octree[octree[g].parent].children[i];
+                    nextFound = 1;
+                }
+            }
+            if(parentNodeIndex == 0){
+                uint currentIndex = 0;
+                while(octree[currentIndex].treeLevel != parentTreeLevel){
+                    currentIndex = octree[currentIndex].more;
+                }
                 nextFound = 1;
             }
+            chunk = extractBits(octree[parentNodeIndex].mortonCode, 9 - octree[parentNodeIndex].treeLevel);
+            parentNodeIndex = octree[parentNodeIndex].parent;
         }
-        if(parentNodeIndex == 0){
-            uint currentIndex = 0;
-            while(octree[currentIndex].treeLevel != parentTreeLevel){
-                currentIndex = octree[currentIndex].more;
-            }
-            nextFound = 1;
-        }
-        chunk = extractBits(octree[parentNodeIndex].mortonCode, 9 - octree[parentNodeIndex].treeLevel);
-        parentNodeIndex = octree[parentNodeIndex].parent;
     }
 }
 
@@ -1921,6 +1926,9 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
                                         RVPtr mass, UVPtr bodyParents, NVPtr octree){
     uint g = (uint) get_global_id(0);
     uint currentIndex = g;
+
+    //If center of mass of node is too close, particle must sum forces to all particles within that cell then go down another layer
+
 
     //Sum to bodies in current cell
     currentIndex = octree[g].parent;

@@ -2501,7 +2501,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
         for(int i = 0; i < octCount; ++i){
             ++count[gData->gpuOctree[i].treeLevel];
             printBinary(gData->gpuOctree[i].prefix); 
-            printf("\tID: %d\tL: %d\tD: %d\tP: %d\tC:", gData->gpuOctree[i].id, gData->gpuOctree[i].treeLevel, gData->gpuOctree[i].delta, gData->gpuOctree[i].parent);
+            printf("\tID: %d\tN: %d\tM: %d\tP: %d\tC:", gData->gpuOctree[i].id, gData->gpuOctree[i].next, gData->gpuOctree[i].more, gData->gpuOctree[i].parent);
 
             for(int j = 0; j < 8; ++j){
                 if(gData->gpuOctree[i].children[j] > 0){
