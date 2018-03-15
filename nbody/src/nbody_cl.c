@@ -1483,7 +1483,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
 
 
-    global[0] = nC[st->effNBody - 1]
+    global[0] = nC[st->effNBody - 1];
     err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
                                 0, global, NULL,
