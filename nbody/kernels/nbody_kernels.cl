@@ -1925,28 +1925,57 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
                                         RVPtr ax, RVPtr ay, RVPtr az,
                                         RVPtr mass, UVPtr bodyParents, NVPtr octree){
     uint g = (uint) get_global_id(0);
-    uint currentIndex = g;
 
     //If center of mass of node is too close, particle must sum forces to all particles within that cell then go down another layer
 
 
     //Sum to bodies in current cell
-    currentIndex = octree[g].parent;
+    uint currentIndex = bodyParents[g];
+    real dx, dy, dz;
     for(int i = 0; i < 8; ++i){
-        //Calculate acceleration
+        //Calculate acceleration to bodies in cell
+        
     }
-    //Sum to all other bodies
-    while(currentIndex != g){
-        currentIndex = octree[currentIndex].next;
-        //while distance is less than rcrit:
-            //currentIndex = octree[currentIndex].more
-        //Calculate acceleration
-
-        ////////////
-        break;
-        ////////////
+    while(octree[currentIndex].more != 0){
+        currentIndex = octree[currentIndex].more;
+        //Calculate acceleration to bodies in cell
     }
-
+    // currentIndex = octree[currentIndex].next;
+    //Stop when we reach the parent cell of the body we have
+    do{
+        dx = x[g] - octree[currentIndex].com[0];
+        dy = y[g] - octree[currentIndex].com[1];
+        dz = z[g] - octree[currentIndex].com[2];
+        real dr2 = mad(dx, dx, mad(dy, dy, mad(dz, dz, EPS2)));
+        if(dr2 > octree[currentIndex].rCrit2){
+            //Calculate force to COM
+            currentIndex = octree[currentIndex].next;
+        }
+        else if(octree[currentIndex].more != 0){
+            currentIndex = octree[currentIndex].more;
+        }
+        else{
+            currentIndex = octree[currentIndex].next;
+        }
+        // if(currentIndex == 0){
+        //     currentIndex = bodyParents[g];
+        //     x[g] = 0;
+        // } 
+        
+        // else if(octree[currentIndex].more != 0){
+        //     // for(int i = 0; i < 8; ++i){ //Sum to all bodies attached to node and go deeper
+                
+        //     // }
+        //     currentIndex = octree[currentIndex].more;
+        //     break;
+        // }
+        // else{ //Sum to all bodies in leaf node
+        //     // for(int i = 0; i < 8; ++i){
+                
+        //     // }
+        // }
+    }while(currentIndex != bodyParents[g]);
+    // x[g] = 0;
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
@@ -2022,6 +2051,9 @@ kernel void computeNodeStats(RVPtr x, RVPtr y, RVPtr z,
     real dz = (zMax[0] - zMin[0])/2;
 
     //rCrit = 
-    octree[g].radius = sqrt(dx*dx + dy*dy + dz*dz)/(1 <<  octree[g].treeLevel);
+    uint denom = (1 << octree[g].treeLevel);
+    octree[g].radius = sqrt(dx*dx + dy*dy + dz*dz)/denom;
+    
+    octree[g].rCrit2 = octree[g].radius * octree[g].radius;
 
 }

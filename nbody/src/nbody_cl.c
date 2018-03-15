@@ -1547,6 +1547,9 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->forceCalculationTreecode, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
+
+    clFinish(ci->queue);
+    return CL_SUCCESS;
 }
 
 
