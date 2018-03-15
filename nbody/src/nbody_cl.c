@@ -2504,11 +2504,11 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
             printf("\tID: %d\tL: %d\tD: %d\tP: %d\tC:", gData->gpuOctree[i].id, gData->gpuOctree[i].treeLevel, gData->gpuOctree[i].delta, gData->gpuOctree[i].parent);
 
             for(int j = 0; j < 8; ++j){
-                if(gData->gpuOctree[i].children[j] != 0){
+                if(gData->gpuOctree[i].children[j] > 0){
                     printf("(%d)\t", gData->gpuOctree[i].children[j]);
                 }
                 else if(gData->gpuOctree[i].leafIndex[j] != -1){
-                    printf(" %d \t", gData->gpuOctree[i].leafIndex[j]);
+                    printf("[%d]\t", gData->gpuOctree[i].leafIndex[j]);
                 }
                 else{
                     printf(" - \t");
