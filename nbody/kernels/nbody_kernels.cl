@@ -1914,7 +1914,7 @@ kernel void threadOctree(NVPtr octree){
                 }
                 nextFound = 1;
             }
-            chunk = extractBits(octree[parentNodeIndex].mortonCode, 9 - octree[parentNodeIndex].treeLevel);
+            chunk = extractBits(octree[parentNodeIndex].prefix, 0);
             parentNodeIndex = octree[parentNodeIndex].parent;
         }
     }
