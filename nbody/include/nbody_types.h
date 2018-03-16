@@ -263,7 +263,7 @@ typedef struct{
 
     cl_mem gpuTree;
 
-    cl_mem gpuLeafs;
+    cl_mem inclusiveTree;
 
     cl_mem gpuOctree;
 

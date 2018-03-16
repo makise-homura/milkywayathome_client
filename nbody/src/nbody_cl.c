@@ -458,6 +458,7 @@ cl_int nbSetAllKernelArguments(NBodyState* st)
         err |= nbSetKernelArguments(k->linkOctree, st->nbb, exact);
         err |= nbSetKernelArguments(k->zeroBuffers, st->nbb, exact);
         err |= nbSetKernelArguments(k->computeNodeStats, st->nbb, exact);
+        err |= nbSetKernelArguments(k->createBodyNodes, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTreeClear, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->buildTree, st->nbb, exact);
 //         err |= nbSetKernelArguments(k->summarizationClear, st->nbb, exact);
@@ -1323,7 +1324,7 @@ static cl_int nbClearBuffers(NBodyState* st, cl_bool updateState)
     //CLEAR TREE BUFFERS:
     err |= clSetKernelArg(kernels->zeroBuffers, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
     err |= clSetKernelArg(kernels->zeroBuffers, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err |= clSetKernelArg(kernels->zeroBuffers, 20, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err |= clSetKernelArg(kernels->zeroBuffers, 20, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err |= clSetKernelArg(kernels->zeroBuffers, 21, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err |= clSetKernelArg(kernels->zeroBuffers, 22, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err |= clSetKernelArg(kernels->zeroBuffers, 23, sizeof(cl_mem), &(st->nbb->swap));
@@ -1358,11 +1359,17 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
     clFinish(ci->queue);
     // printf("NODE COUNTS:\n");
-    
+    err |= clSetKernelArg(kernels->createBodyNodes, 18, sizeof(cl_mem), &(st->nbb->inclusiveTree));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->createBodyNodes, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
+
+    if (err != CL_SUCCESS)
+    return err;
 
     // printf("BEGINNING TREE CONSTRUCTION\n");
     err = clSetKernelArg(kernels->constructTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err = clSetKernelArg(kernels->constructTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->constructTree, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->constructTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->constructTree, 1,
                                 0, global, NULL,
@@ -1377,7 +1384,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody;
 
     err = clSetKernelArg(kernels->countOctNodes, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err = clSetKernelArg(kernels->countOctNodes, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->countOctNodes, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->countOctNodes, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->countOctNodes, 1,
                                 0, global, NULL,
@@ -1462,7 +1469,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     //THIS IS THE PROBLEM HERE:
     global[0] = st->effNBody - 1;
     err = clSetKernelArg(kernels->constructOctTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->constructOctTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err = clSetKernelArg(kernels->constructOctTree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->constructOctTree, 1,
@@ -1479,7 +1486,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     global[0] = st->effNBody;
     err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
     err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->gpuLeafs));
+    err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err = clSetKernelArg(kernels->linkOctree, 22, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
@@ -1708,7 +1715,7 @@ static cl_int _nbReleaseBuffers(NBodyBuffers* nbb)
     err |= clReleaseMemObject_quiet(nbb->mCodes);
     err |= clReleaseMemObject_quiet(nbb->iteration);
     err |= clReleaseMemObject_quiet(nbb->gpuTree);
-    err |= clReleaseMemObject_quiet(nbb->gpuLeafs);
+    err |= clReleaseMemObject_quiet(nbb->inclusiveTree);
     err |= clReleaseMemObject_quiet(nbb->gpuOctree);
     err |= clReleaseMemObject_quiet(nbb->nodeCounts);
     err |= clReleaseMemObject_quiet(nbb->swap);
@@ -1816,8 +1823,8 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
             st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
             st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
         }
-        st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
-        st->nbb->gpuLeafs = mwCreateZeroReadWriteBuffer(ci, n* sizeof(gpuNode));
+        st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, 2 * n * sizeof(gpuNode));
+        st->nbb->inclusiveTree = mwCreateZeroReadWriteBuffer(ci, 2 * n * sizeof(gpuNode));
         st->nbb->gpuOctree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
         st->nbb->nodeCounts = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->swap = mwCreateZeroReadWriteBuffer(ci, n* sizeof(uint32_t));
