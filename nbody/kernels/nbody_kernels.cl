@@ -1932,6 +1932,15 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     //Sum to bodies in current cell
     uint currentIndex = bodyParents[g];
     real dx, dy, dz;
+
+    real4 drVec;
+    
+    real dr2;
+    real dr;
+    real m2;
+    real ai;
+
+
     for(int i = 0; i < 8; ++i){
         //Calculate acceleration to bodies in cell
         
@@ -1943,24 +1952,59 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     // currentIndex = octree[currentIndex].next;
     //Stop when we reach the parent cell of the body we have
     do{
-        dx = x[g] - octree[currentIndex].com[0];
-        dy = y[g] - octree[currentIndex].com[1];
-        dz = z[g] - octree[currentIndex].com[2];
-        real dr2 = mad(dx, dx, mad(dy, dy, mad(dz, dz, EPS2)));
-        if(dr2 > octree[currentIndex].rCrit2){
-            //Calculate force to COM
+        drVec.x = x[g] - octree[currentIndex].com[0];
+        drVec.y = y[g] - octree[currentIndex].com[1];
+        drVec.z = z[g] - octree[currentIndex].com[2];
+        real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
+        
+        if(dr2 > octree[currentIndex].rCrit2){ //If we are far enough away to use the CELL COM
+            // real dr = sqrt(dr2);
+            // m2 = octree[currentIndex].massEnclosed;
+            // ai = m2/(dr*dr2);
+            // ax[g] += ai * drVec.x;
+            // ay[g] += ai * drVec.y;
+            // az[g] += ai * drVec.z;
+
             currentIndex = octree[currentIndex].next;
         }
         else if(octree[currentIndex].more != 0){
+            // for(int i = 0; i < 8; ++i){
+            //     if(octree[currentIndex].leafIndex[i] != -1){
+            //         drVec.x = x[g] - x[octree[currentIndex].leafIndex[i]];
+            //         drVec.x = y[g] - y[octree[currentIndex].leafIndex[i]];
+            //         drVec.x = z[g] - z[octree[currentIndex].leafIndex[i]];
+            //         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
+            //         real dr = sqrt(dr2);
+            //         m2 = mass[octree[currentIndex].leafIndex[i]];
+            //         ai = m2/(dr*dr2);
+            //         ax[g] += ai * drVec.x;
+            //         ay[g] += ai * drVec.y;
+            //         az[g] += ai * drVec.z;
+            //     }
+            // }
             currentIndex = octree[currentIndex].more;
         }
         else{
+            // for(int i = 0; i < 8; ++i){
+            //     if(octree[currentIndex].leafIndex[i] != -1){
+            //         drVec.x = x[g] - x[octree[currentIndex].leafIndex[i]];
+            //         drVec.x = y[g] - y[octree[currentIndex].leafIndex[i]];
+            //         drVec.x = z[g] - z[octree[currentIndex].leafIndex[i]];
+            //         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
+            //         real dr = sqrt(dr2);
+            //         m2 = mass[octree[currentIndex].leafIndex[i]];
+            //         ai = m2/(dr*dr2);
+            //         ax[g] += ai * drVec.x;
+            //         ay[g] += ai * drVec.y;
+            //         az[g] += ai * drVec.z;
+            //     }
+            // }
             currentIndex = octree[currentIndex].next;
         }
-        // if(currentIndex == 0){
-        //     currentIndex = bodyParents[g];
-        //     x[g] = 0;
-        // } 
+        if(currentIndex == 0){
+            currentIndex = bodyParents[g];
+            // x[g] = 0;
+        } 
         
         // else if(octree[currentIndex].more != 0){
         //     // for(int i = 0; i < 8; ++i){ //Sum to all bodies attached to node and go deeper
