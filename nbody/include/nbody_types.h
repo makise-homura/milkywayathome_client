@@ -384,6 +384,7 @@ typedef struct
     
     gpuNode* gpuTree;
     gpuNode* gpuOctree;
+    gpuNode* inclusiveTree;
 
 }gpuData;
 
