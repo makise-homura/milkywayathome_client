@@ -2638,8 +2638,8 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         ++st->step;
     }
     gettimeofday(&end[5], NULL);
-    // readGPUBuffers(st, &gData);
-    printDebugStatus(ctx, st, &gData);
+    readGPUBuffers(st, &gData);
+    // printDebugStatus(ctx, st, &gData);
 
     printf("==============================\n");
     printf("BOUNDING BOX EXECUTION TIME:\n");

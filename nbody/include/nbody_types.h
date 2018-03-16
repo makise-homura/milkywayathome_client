@@ -224,7 +224,7 @@ typedef struct _gpuNode{
     uint32_t prefix;
     uint32_t delta;
 
-    uint isLeaf;
+    uint isBody;
     uint treeLevel;
     uint mortonCode;
 

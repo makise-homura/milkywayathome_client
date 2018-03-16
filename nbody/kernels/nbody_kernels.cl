@@ -256,7 +256,7 @@ typedef struct node
     uint prefix;
     uint delta;
 
-    uint isLeaf;
+    uint isBody;
     uint treeLevel;
     uint mortonCode;
 
@@ -1553,7 +1553,7 @@ __kernel void createBodyNodes(RVPtr x, RVPtr y, RVPtr z,
     uint offset = GLOBALOFFSET;
 
     NVPtr b = &inclusiveTree[g];
-    b->isLeaf = 1;
+    b->isBody = 1;
     b->mortonCode = mCodes_G[g];
     // b->prefix = mCodes_G[g];
     b->id = g;
@@ -2009,7 +2009,7 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
 
 
     //Sum to bodies in current cell
-    uint currentIndex = bodyParents[g];
+    uint currentIndex = inclusiveTree[g].next;
     real dx, dy, dz;
 
     real4 drVec;
@@ -2030,58 +2030,37 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     // }
     // currentIndex = octree[currentIndex].next;
     //Stop when we reach the parent cell of the body we have
-
-    do{
-        currentIndex = inclusiveTree[g].next;
-        drVec.x = x[g] - inclusiveTree[currentIndex].pos[0];
-        drVec.y = y[g] - inclusiveTree[currentIndex].pos[1];
-        drVec.z = z[g] - inclusiveTree[currentIndex].pos[2];
+    int steps = 0;
+    //MOST NUMBER OF STEPS WE WILL EVER HAVE TO TAKE:
+    for(int i = 0; i < EFFNBODY; ++i){
+    // do{
+        // if(currentIndex == g){
+        //     valid = 0;
+        // }
+        drVec.x = inclusiveTree[g].pos[0] - inclusiveTree[currentIndex].pos[0];
+        drVec.y = inclusiveTree[g].pos[1] - inclusiveTree[currentIndex].pos[1];
+        drVec.z = inclusiveTree[g].pos[2] - inclusiveTree[currentIndex].pos[2];
         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
         
-    //     if(dr2 > octree[currentIndex].rCrit2){ //If we are far enough away to use the CELL COM
-    //         // real dr = sqrt(dr2);
-    //         // m2 = octree[currentIndex].massEnclosed;
-    //         // ai = m2/(dr*dr2);
-    //         // ax[g] += ai * drVec.x;
-    //         // ay[g] += ai * drVec.y;
-    //         // az[g] += ai * drVec.z;
+        if(dr2 > inclusiveTree[currentIndex].rCrit2){ //If we are far enough away to use the CELL COM
+            real dr = sqrt(dr2);
+            m2 = inclusiveTree[currentIndex].mass;
+            ai = m2/(dr*dr2);
+            ax[g] += ai * drVec.x;
+            ay[g] += ai * drVec.y;
+            az[g] += ai * drVec.z;
 
-    //         currentIndex = octree[currentIndex].next;
-    //     }
-    //     else if(octree[currentIndex].more != 0){
-    //         // for(int i = 0; i < 8; ++i){
-    //         //     if(octree[currentIndex].leafIndex[i] != -1){
-    //         //         drVec.x = x[g] - x[octree[currentIndex].leafIndex[i]];
-    //         //         drVec.x = y[g] - y[octree[currentIndex].leafIndex[i]];
-    //         //         drVec.x = z[g] - z[octree[currentIndex].leafIndex[i]];
-    //         //         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
-    //         //         real dr = sqrt(dr2);
-    //         //         m2 = mass[octree[currentIndex].leafIndex[i]];
-    //         //         ai = m2/(dr*dr2);
-    //         //         ax[g] += ai * drVec.x;
-    //         //         ay[g] += ai * drVec.y;
-    //         //         az[g] += ai * drVec.z;
-    //         //     }
-    //         // }
-    //         currentIndex = octree[currentIndex].more;
-    //     }
-    //     else{
-    //         // for(int i = 0; i < 8; ++i){
-    //         //     if(octree[currentIndex].leafIndex[i] != -1){
-    //         //         drVec.x = x[g] - x[octree[currentIndex].leafIndex[i]];
-    //         //         drVec.x = y[g] - y[octree[currentIndex].leafIndex[i]];
-    //         //         drVec.x = z[g] - z[octree[currentIndex].leafIndex[i]];
-    //         //         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
-    //         //         real dr = sqrt(dr2);
-    //         //         m2 = mass[octree[currentIndex].leafIndex[i]];
-    //         //         ai = m2/(dr*dr2);
-    //         //         ax[g] += ai * drVec.x;
-    //         //         ay[g] += ai * drVec.y;
-    //         //         az[g] += ai * drVec.z;
-    //         //     }
-    //         // }
-    //         currentIndex = octree[currentIndex].next;
-    //     }
+            currentIndex = inclusiveTree[currentIndex].next;
+        }
+        else if(inclusiveTree[currentIndex].isBody != 1){   //otherwise, go deeper in the tree if possible
+            currentIndex = inclusiveTree[currentIndex].more;
+        }
+        else{ //If we can't go deeper, we are at a body, so we can calculate the force to it then move on
+            currentIndex = inclusiveTree[currentIndex].next;
+        }
+        // if(currentIndex == g){
+        //     break;
+        // }
     //     if(currentIndex == 0){
     //         currentIndex = bodyParents[g];
     //         // x[g] = 0;
@@ -2099,9 +2078,11 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
                 
     //     //     // }
     //     // }
-    currentIndex = g;
-    }while(currentIndex != g);
-    // // x[g] = 0;
+    // currentIndex = g;
+    ++steps;
+    }
+    // }while(currentIndex != g);
+    x[g] = steps;
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
