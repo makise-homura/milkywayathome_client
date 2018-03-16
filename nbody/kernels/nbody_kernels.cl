@@ -1942,7 +1942,7 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
         else{
             inclusiveTree[index].children[currentChunk] = g;
             inclusiveTree[g].parent = index;
-            inclusiveTree[g].prefix = inclusiveTree[index].prefix >> 3;
+            inclusiveTree[g].prefix = currentChunk;
             int i = 0;
             while(mCodes_G[g] == mCodes_G[g + i]){
                 bodyParents[g + i] = index;
@@ -2030,11 +2030,13 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     // }
     // currentIndex = octree[currentIndex].next;
     //Stop when we reach the parent cell of the body we have
-    // do{
-    //     drVec.x = x[g] - octree[currentIndex].pos[0];
-    //     drVec.y = y[g] - octree[currentIndex].pos[1];
-    //     drVec.z = z[g] - octree[currentIndex].pos[2];
-    //     real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
+
+    do{
+        currentIndex = inclusiveTree[g].next;
+        drVec.x = x[g] - inclusiveTree[currentIndex].pos[0];
+        drVec.y = y[g] - inclusiveTree[currentIndex].pos[1];
+        drVec.z = z[g] - inclusiveTree[currentIndex].pos[2];
+        real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
         
     //     if(dr2 > octree[currentIndex].rCrit2){ //If we are far enough away to use the CELL COM
     //         // real dr = sqrt(dr2);
@@ -2097,7 +2099,8 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
                 
     //     //     // }
     //     // }
-    // }while(currentIndex != bodyParents[g]);
+    currentIndex = g;
+    }while(currentIndex != g);
     // // x[g] = 0;
 }
 
