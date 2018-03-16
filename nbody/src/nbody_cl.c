@@ -1500,7 +1500,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
                                 0, global, NULL,
                                 0, NULL, &ev);
 
-    global[0] += st->effNBody;
+    global[0] = 2 * st->effNBody;
     err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
                                 0, global, NULL,
@@ -2508,7 +2508,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
     }
     printf("----------------------------\n");
 
-
+    
     int octCount = st->effNBody + gData->nodeCounts[st->effNBody - 1] + 1;
     printf("REQUIRED OCTREE NODES: %d\n", gData->nodeCounts[st->effNBody - 1] + 1);
     fflush(NULL);
@@ -2521,11 +2521,11 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
             printf("\tID: %d\tR: %.2f\t ME: %.2f\tCOM: (%.2f, %.2f, %.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].massEnclosed, gData->inclusiveTree[i].com[0], gData->inclusiveTree[i].com[1], gData->inclusiveTree[i].com[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
 
             for(int j = 0; j < 8; ++j){
-                if(gData->inclusiveTree[i].children[j] > 0){
+                if(gData->inclusiveTree[i].children[j] > offset){
                     printf("(%d)\t", gData->inclusiveTree[i].children[j]);
                 }
-                else if(gData->inclusiveTree[i].leafIndex[j] != -1){
-                    printf("[%d]\t", gData->inclusiveTree[i].leafIndex[j]);
+                else if(gData->inclusiveTree[i].children[j] < offset){
+                    printf("[%d]\t", gData->inclusiveTree[i].children[j]);
                 }
                 else{
                     printf(" - \t");
