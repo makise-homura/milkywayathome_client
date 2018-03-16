@@ -1539,15 +1539,15 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     local[0] = ws->local[0];
     cl_event ev;
 
-    // err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->pos, 0);
-    // err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->vel, 3);
-    // err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->acc, 6);
-    // err |= clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->mass));        
-    // err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->bodyParents));
-    // err |= clSetKernelArg(kernels->forceCalculationTreecode, 11, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    // err |= clEnqueueNDRangeKernel(ci->queue, kernels->forceCalculationTreecode, 1,
-    //                             0, global, NULL,
-    //                             0, NULL, &ev);
+    err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->pos, 0);
+    err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->vel, 3);
+    err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->acc, 6);
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->mass));        
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->bodyParents));
+    err |= clSetKernelArg(kernels->forceCalculationTreecode, 11, sizeof(cl_mem), &(st->nbb->inclusiveTree));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->forceCalculationTreecode, 1,
+                                0, global, NULL,
+                                0, NULL, &ev);
 
     clFinish(ci->queue);
     return CL_SUCCESS;
@@ -2517,8 +2517,11 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
     int count[10] = {0};
         for(int i = 0; i < octCount; ++i){
             ++count[gData->inclusiveTree[i].treeLevel];
+            if(i == st->effNBody){
+                printf("-----------------------------------------------------\n");
+            }
             printBinary(gData->inclusiveTree[i].prefix); 
-            printf("\tID: %d\tR: %.2f\t ME: %.2f\tCOM: (%.2f, %.2f, %.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].massEnclosed, gData->inclusiveTree[i].com[0], gData->inclusiveTree[i].com[1], gData->inclusiveTree[i].com[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
+            printf("\tID: %d\tR: %.2f\t ME: %.2f\tCOM: (%.2f, %.2f, %.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
 
             for(int j = 0; j < 8; ++j){
                 if(gData->inclusiveTree[i].children[j] > offset){
