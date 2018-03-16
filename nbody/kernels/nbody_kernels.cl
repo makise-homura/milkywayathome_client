@@ -234,10 +234,15 @@ typedef __global real* restrict RVPtr;
 typedef __global volatile int* restrict IVPtr;
 typedef __global uint* restrict UVPtr;
 
-struct node;
-
-typedef struct
+typedef struct node node;
+typedef struct node
 {
+    node* parentP;
+    node* subP[8];
+
+    node* nextP;
+    node* moreP;
+
     uint parent;
     
     int children[8];
@@ -262,6 +267,9 @@ typedef struct
 
     real radius;
     real rCrit2;
+
+    real mass;
+    real pos[3];
 
     real massEnclosed;
     real com[3];
@@ -1529,6 +1537,27 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
   barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
   //Use global thread ID as a LSB identifier to seperate morton code collisions.
+}
+
+__kernel void createBodyNodes(RVPtr x, RVPtr y, RVPtr z,
+                            RVPtr vx, RVPtr vy, RVPtr vz,
+                            RVPtr ax, RVPtr ay, RVPtr az,
+                            RVPtr mass, RVPtr xMax, RVPtr yMax,
+                            RVPtr zMax, RVPtr xMin, RVPtr yMin,
+                            RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
+                            NVPtr bodyNodes){
+
+    uint g = (uint) get_global_id(0);
+    NVPtr b = &bodyNodes[g];
+    b->isLeaf = 1;
+    b->mortonCode = mCodes_G[g];
+    b->id = g;
+    b->mass = mass[g];
+    b->pos[0] = x[g];
+    b->pos[1] = y[g];
+    b->pos[2] = z[g];
+    
+
 }
 
 

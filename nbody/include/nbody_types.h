@@ -204,9 +204,15 @@ typedef struct MW_ALIGN_TYPE
 //     cl_mem output;  
 // } NBodyBuffers;
 
-// struct gpuNode;
+typedef struct _gpuNode _gpuNode;
 
-typedef struct gpuNode{
+typedef struct _gpuNode{
+    _gpuNode* parentP;
+    _gpuNode* subP[8];
+
+    _gpuNode* nextP;
+    _gpuNode* moreP;
+    
     uint parent;
     
     int children[8];
@@ -231,6 +237,9 @@ typedef struct gpuNode{
 
     real radius;
     real rCrit2;
+
+    real mass;
+    real pos[3];
 
     real massEnclosed;
     real com[3];
@@ -331,6 +340,7 @@ typedef struct
     cl_kernel threadOctree;
     cl_kernel forceCalculationTreecode;
     cl_kernel zeroBuffers;
+    cl_kernel createBodyNodes;
     cl_kernel computeNodeStats;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;

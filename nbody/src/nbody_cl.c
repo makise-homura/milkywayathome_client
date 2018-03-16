@@ -720,6 +720,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     kernels->forceCalculationTreecode = mwCreateKernel(program, "forceCalculationTreecode");
     kernels->zeroBuffers = mwCreateKernel(program, "zeroBuffers");
     kernels->computeNodeStats = mwCreateKernel(program, "computeNodeStats");
+    kernels->createBodyNodes = mwCreateKernel(program, "createBodyNodes");
 //     kernels->buildTreeClear = mwCreateKernel(program, "buildTreeClear");
 //     kernels->buildTree = mwCreateKernel(program, "buildTree");
 //     kernels->summarizationClear = mwCreateKernel(program, "summarizationClear");
@@ -743,6 +744,7 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
             &&  kernels->threadOctree
             &&  kernels->forceCalculationTreecode
             &&  kernels->zeroBuffers
+            &&  kernels->createBodyNodes
             &&  kernels->computeNodeStats
             &&  kernels->forceCalculationExact
             &&  kernels->advanceHalfVelocity
