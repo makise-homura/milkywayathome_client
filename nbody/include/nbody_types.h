@@ -240,6 +240,7 @@ typedef struct _gpuNode{
 
     real mass;
     real pos[3];
+    real acc[3];
 
     real massEnclosed;
     real com[3];

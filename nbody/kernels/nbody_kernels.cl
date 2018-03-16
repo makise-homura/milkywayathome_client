@@ -272,6 +272,7 @@ typedef struct node
 
     real mass;
     real pos[3];
+    real acc[3];
 
     real massEnclosed;
     real com[3];
@@ -1982,12 +1983,13 @@ kernel void threadOctree(NVPtr inclusiveTree){
                 }
             }
             if(parentNodeIndex == rootIndex && nextFound != 1){
-                for(int i = 0; i < 8; ++i){
-                    if(inclusiveTree[parentNodeIndex].children[i] != rootIndex){
-                        inclusiveTree[g].next = inclusiveTree[parentNodeIndex].children[i];
-                        break;
-                    }
-                }
+                inclusiveTree[g].next = rootIndex;
+                // for(int i = 0; i < 8; ++i){
+                //     if(inclusiveTree[parentNodeIndex].children[i] != rootIndex){
+                //         inclusiveTree[g].next = inclusiveTree[parentNodeIndex].children[i];
+                //         break;
+                //     }
+                // }
                 nextFound = 1;
             }
             chunk = extractBits(inclusiveTree[parentNodeIndex].prefix, 0);
@@ -2010,6 +2012,8 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
 
     //Sum to bodies in current cell
     uint currentIndex = inclusiveTree[g].next;
+    uint offset = GLOBALOFFSET;
+    uint rootIndex = offset;
     real dx, dy, dz;
 
     real4 drVec;
@@ -2018,71 +2022,34 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     real dr;
     real m2;
     real ai;
+    real4 a;
+    a.x = a.y = a.z = 0;
 
-
-    // for(int i = 0; i < 8; ++i){
-    //     //Calculate acceleration to bodies in cell
-        
-    // }
-    // while(octree[currentIndex].more != 0){
-    //     currentIndex = octree[currentIndex].more;
-    //     //Calculate acceleration to bodies in cell
-    // }
-    // currentIndex = octree[currentIndex].next;
-    //Stop when we reach the parent cell of the body we have
-    int steps = 0;
-    //MOST NUMBER OF STEPS WE WILL EVER HAVE TO TAKE:
-    for(int i = 0; i < EFFNBODY; ++i){
-    // do{
-        // if(currentIndex == g){
-        //     valid = 0;
-        // }
+    int numForceCalc = 0;
+    do{
         drVec.x = inclusiveTree[g].pos[0] - inclusiveTree[currentIndex].pos[0];
         drVec.y = inclusiveTree[g].pos[1] - inclusiveTree[currentIndex].pos[1];
         drVec.z = inclusiveTree[g].pos[2] - inclusiveTree[currentIndex].pos[2];
         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
-        
-        if(dr2 > inclusiveTree[currentIndex].rCrit2){ //If we are far enough away to use the CELL COM
-            real dr = sqrt(dr2);
-            m2 = inclusiveTree[currentIndex].mass;
-            ai = m2/(dr*dr2);
-            ax[g] += ai * drVec.x;
-            ay[g] += ai * drVec.y;
-            az[g] += ai * drVec.z;
-
+        if((inclusiveTree[currentIndex].isBody) || (dr2 >= inclusiveTree[currentIndex].rCrit2)){
+            if(currentIndex != g){
+                ++numForceCalc;
+                real dr = sqrt(dr2);
+                m2 = inclusiveTree[currentIndex].mass;
+                ai = m2/(dr*dr2);
+                a.x += ai * drVec.x;
+                a.y += ai * drVec.y;
+                a.z += ai * drVec.z;
+            }
             currentIndex = inclusiveTree[currentIndex].next;
         }
-        else if(inclusiveTree[currentIndex].isBody != 1){   //otherwise, go deeper in the tree if possible
+        else{
             currentIndex = inclusiveTree[currentIndex].more;
         }
-        else{ //If we can't go deeper, we are at a body, so we can calculate the force to it then move on
-            currentIndex = inclusiveTree[currentIndex].next;
-        }
-        // if(currentIndex == g){
-        //     break;
-        // }
-    //     if(currentIndex == 0){
-    //         currentIndex = bodyParents[g];
-    //         // x[g] = 0;
-    //     } 
-        
-    //     // else if(octree[currentIndex].more != 0){
-    //     //     // for(int i = 0; i < 8; ++i){ //Sum to all bodies attached to node and go deeper
-                
-    //     //     // }
-    //     //     currentIndex = octree[currentIndex].more;
-    //     //     break;
-    //     // }
-    //     // else{ //Sum to all bodies in leaf node
-    //     //     // for(int i = 0; i < 8; ++i){
-                
-    //     //     // }
-    //     // }
-    // currentIndex = g;
-    ++steps;
-    }
-    // }while(currentIndex != g);
-    x[g] = steps;
+    }while(currentIndex != rootIndex);
+    inclusiveTree[currentIndex].acc[0] = a.x;
+    inclusiveTree[currentIndex].acc[1] = a.y;
+    inclusiveTree[currentIndex].acc[2] = a.z;
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){

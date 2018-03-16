@@ -1536,7 +1536,7 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     cl_int effNBody = st->effNBody;
 
     global[0] = st->effNBody;
-    local[0] = ws->local[0];
+    local[0] = ws->local[0];//1;
     cl_event ev;
 
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->pos, 0);
