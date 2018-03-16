@@ -1393,134 +1393,128 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     return err;
 
 
-    // STORE NODE COUNTS FOR INCLUSIVE PREFIX SUM:
-    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->swap));
-    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
-        0, global, NULL,
-        0, NULL, &ev);
+    // // STORE NODE COUNTS FOR INCLUSIVE PREFIX SUM:
+    // err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    // err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->swap));
+    // err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
+    //     0, global, NULL,
+    //     0, NULL, &ev);
         
-    if(err != CL_SUCCESS)
-        return err;
+    // if(err != CL_SUCCESS)
+    //     return err;
 
 
-    // PREFIX SUM UPSWEEP:
+    // // PREFIX SUM UPSWEEP:
 
-    uint *value = 0;
-    err |= clEnqueueWriteBuffer(st->ci->queue,
-                            st->nbb->iteration,
-                            CL_TRUE,
-                            0, sizeof(uint), value,
-                            0, NULL, NULL);
-    err = clSetKernelArg(kernels->prefixSumUpsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err = clSetKernelArg(kernels->prefixSumUpsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
-    for(int i = 0; i < log2(st->effNBody); ++i){
-        global[0] = st->effNBody >> (i + 1);
-        err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumUpsweep, 1,
-                                    0, global, NULL,
-                                    0, NULL, &ev);
-        if (err != CL_SUCCESS)
-        return err;
-    }
+    // uint *value = 0;
+    // err |= clEnqueueWriteBuffer(st->ci->queue,
+    //                         st->nbb->iteration,
+    //                         CL_TRUE,
+    //                         0, sizeof(uint), value,
+    //                         0, NULL, NULL);
+    // err = clSetKernelArg(kernels->prefixSumUpsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    // err = clSetKernelArg(kernels->prefixSumUpsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
+    // for(int i = 0; i < log2(st->effNBody); ++i){
+    //     global[0] = st->effNBody >> (i + 1);
+    //     err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumUpsweep, 1,
+    //                                 0, global, NULL,
+    //                                 0, NULL, &ev);
+    //     if (err != CL_SUCCESS)
+    //     return err;
+    // }
 
 
-    //PREFIX SUM DOWNSWEEP:
-    err = clSetKernelArg(kernels->prefixSumDownsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err = clSetKernelArg(kernels->prefixSumDownsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
-    for(int i = 0; i < log2(st->effNBody); ++i){
-        global[0] = 1 << (i);
-        // printf("%d\n", global[0]);
-        err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumDownsweep, 1,
-                                    0, global, NULL,
-                                    0, NULL, &ev);
-        if (err != CL_SUCCESS)
-        return err;
-    }
+    // //PREFIX SUM DOWNSWEEP:
+    // err = clSetKernelArg(kernels->prefixSumDownsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    // err = clSetKernelArg(kernels->prefixSumDownsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
+    // for(int i = 0; i < log2(st->effNBody); ++i){
+    //     global[0] = 1 << (i);
+    //     // printf("%d\n", global[0]);
+    //     err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumDownsweep, 1,
+    //                                 0, global, NULL,
+    //                                 0, NULL, &ev);
+    //     if (err != CL_SUCCESS)
+    //     return err;
+    // }
 
     
-    // ADD STORED NODE COUNTS FOR INCLUSIVE PREFIX SUM:
-    global[0] = st->effNBody;
-    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->swap));
-    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
-        0, global, NULL,
-        0, NULL, &ev);
+    // // ADD STORED NODE COUNTS FOR INCLUSIVE PREFIX SUM:
+    // global[0] = st->effNBody;
+    // err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    // err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->swap));
+    // err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
+    //     0, global, NULL,
+    //     0, NULL, &ev);
         
-    if(err != CL_SUCCESS)
-        return err;
+    // if(err != CL_SUCCESS)
+    //     return err;
 
 
 
  
-    uint32_t* nC = calloc(st->effNBody, sizeof(uint32_t));
-    err |= clEnqueueReadBuffer(st->ci->queue,
-                            st->nbb->nodeCounts,
-                            CL_TRUE,
-                            0, st->effNBody*sizeof(uint32_t), nC,
-                            0, NULL, NULL);
-    err |= clEnqueueBarrier(ci->queue);
-    if (err != CL_SUCCESS)
-        return err;
-    nC[st->effNBody - 1] += 1; //Add one to account for root node
+    // uint32_t* nC = calloc(st->effNBody, sizeof(uint32_t));
+    // err |= clEnqueueReadBuffer(st->ci->queue,
+    //                         st->nbb->nodeCounts,
+    //                         CL_TRUE,
+    //                         0, st->effNBody*sizeof(uint32_t), nC,
+    //                         0, NULL, NULL);
+    // err |= clEnqueueBarrier(ci->queue);
+    // if (err != CL_SUCCESS)
+    //     return err;
+    // nC[st->effNBody - 1] += 1; //Add one to account for root node
     
     
-    // printf("%d<<<<<<<<<<<<<<<<<<\n", nC[st->effNBody - 1]);
+    // // printf("%d<<<<<<<<<<<<<<<<<<\n", nC[st->effNBody - 1]);
     
-    //THIS IS THE PROBLEM HERE:
-    global[0] = st->effNBody - 1;
-    err = clSetKernelArg(kernels->constructOctTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
-    err = clSetKernelArg(kernels->constructOctTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err = clSetKernelArg(kernels->constructOctTree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    err = clEnqueueNDRangeKernel(ci->queue, kernels->constructOctTree, 1,
-                                0, global, NULL,
-                                0, NULL, &ev);
+    // //THIS IS THE PROBLEM HERE:
+    // global[0] = st->effNBody - 1;
+    // err = clSetKernelArg(kernels->constructOctTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
+    // err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
+    // err = clSetKernelArg(kernels->constructOctTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    // err = clSetKernelArg(kernels->constructOctTree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    // err = clEnqueueNDRangeKernel(ci->queue, kernels->constructOctTree, 1,
+    //                             0, global, NULL,
+    //                             0, NULL, &ev);
 
-    err = clEnqueueBarrier(ci->queue);
-    if (err != CL_SUCCESS)
-        return err;
+    // err = clEnqueueBarrier(ci->queue);
+    // if (err != CL_SUCCESS)
+    //     return err;
 
         
-    // NODE COUNTS:
+    // // NODE COUNTS:
         
-    global[0] = st->effNBody;
-    err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
-    err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
-    err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->inclusiveTree));
-    err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err = clSetKernelArg(kernels->linkOctree, 22, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
-                                0, global, NULL,
-                                0, NULL, &ev);
+    // global[0] = st->effNBody;
+    // err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
+    // err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
+    // err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->inclusiveTree));
+    // err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    // err = clSetKernelArg(kernels->linkOctree, 22, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    // err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
+    //                             0, global, NULL,
+    //                             0, NULL, &ev);
 
 
 
-    global[0] = nC[st->effNBody - 1];
-    err = clSetKernelArg(kernels->computeNodeStats, 18, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    err = clEnqueueNDRangeKernel(ci->queue, kernels->computeNodeStats, 1,
-                                0, global, NULL,
-                                0, NULL, &ev);
+    // global[0] = nC[st->effNBody - 1];
+    // err = clSetKernelArg(kernels->computeNodeStats, 18, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    // err = clEnqueueNDRangeKernel(ci->queue, kernels->computeNodeStats, 1,
+    //                             0, global, NULL,
+    //                             0, NULL, &ev);
 
 
-    err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
-                                0, global, NULL,
-                                0, NULL, &ev);
+    // err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->gpuOctree));
+    // err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
+    //                             0, global, NULL,
+    //                             0, NULL, &ev);
 
 
 
-    err |= clEnqueueBarrier(ci->queue);
-    if (err != CL_SUCCESS)
-        return err;
+    // err |= clEnqueueBarrier(ci->queue);
+    // if (err != CL_SUCCESS)
+    //     return err;
 
     clFinish(ci->queue);
-    // printf("NODE COUNTS:\n");
-    // for(int i = 0; i < st->effNBody; ++i){
-    //     printf("%d\n", nC[i]);
-    // }
-    // printf("=========================\n");
 
-    // printf("COMPLETED TREE CONSTRUCTION\n");
     free(nC);
     return CL_SUCCESS;
 }

@@ -171,6 +171,8 @@ typedef float4 real4;
 #define NULL_BODY (-1)
 #define LOCK (-2)
 
+#define GLOBALOFFSET EFFNBODY
+
 
 /* This needs to be the same as on the host */
 typedef struct __attribute__((aligned(64)))
@@ -1667,7 +1669,7 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    uint offset = 0;
+    uint offset = GLOBALOFFSET;
 
     inclusiveTree[g + offset].id = g + offset;
     gpuBinaryTree[g + offset].id = g + offset;
@@ -1698,7 +1700,7 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     int split = findSplit(mCodes_G, range.x, range.y);
 
     uint delta = clz(mCodes_G[split]^mCodes_G[split+1]) - 2;
-    gpuBinaryTree[g].delta = delta;    
+    gpuBinaryTree[g + offset].delta = delta;    
     if(split == range.x){
         // inclusiveTree[split].delta = delta;
 
@@ -1752,7 +1754,7 @@ __kernel void countOctNodes(RVPtr x, RVPtr y, RVPtr z,
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    uint offset = 0;
+    uint offset = GLOBALOFFSET;
 
     if(g != 0){
         // NVPtr node = &gpuBinaryTree[g];
@@ -1836,7 +1838,7 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    uint offset = 0;
+    uint offset = GLOBALOFFSET;
 
     if(g != 0){
         uint index = nodeCounts[g - 1] + 1 + offset;
@@ -1911,7 +1913,7 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
     uint l = (uint) get_local_id(0);
     uint group = (uint) get_group_id(0);
 
-    uint offset = 0;
+    uint offset = GLOBALOFFSET;
 
     uint index = 0 + offset;
     uint leafFound = 0;
@@ -1939,7 +1941,7 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
 kernel void threadOctree(NVPtr octree){
     uint g = (uint) get_global_id(0);
 
-    uint offset = 0;
+    uint offset = GLOBALOFFSET;
 
     uint chunk = extractBits(octree[g].prefix, 0);
     int nextFound = 0;
