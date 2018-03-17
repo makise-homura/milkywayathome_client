@@ -211,11 +211,11 @@ typedef struct _gpuNode{
     
     int children[8];
 
-    uint next;
+    int next;
     uint more;
 
-    uint32_t prefix;
-    uint32_t delta;
+    uint prefix;
+    uint delta;
 
     uint isBody;
     uint treeLevel;

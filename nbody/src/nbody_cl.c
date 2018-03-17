@@ -1331,6 +1331,7 @@ static cl_int nbClearBuffers(NBodyState* st, cl_bool updateState)
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->zeroBuffers, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
+    clFinish(ci->queue);
 }
 
 static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
@@ -2606,7 +2607,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
                 printf("-----------------------------------------------------\n");
             }
             printBinary(gData->inclusiveTree[i].prefix); 
-            printf("\tID: %d\tR: %.2f\t ME: %.2f\tCOM: (%.2f, %.2f, %.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
+            printf("\tID: %d\tR: %.2f\t ME: %.3f\tCOM: (%6.2f, %6.2f, %6.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
 
             for(int j = 0; j < 8; ++j){
                 if(gData->inclusiveTree[i].children[j] > offset){
@@ -2646,6 +2647,14 @@ void printDebugBodies(const NBodyCtx* ctx, NBodyState* st, gpuData gData){
 NBodyStatus nbRunTreeConstruction(const NBodyCtx* ctx, NBodyState* st, gpuData* gDataP,
                                      struct timeval* start, struct timeval* end){
     cl_int err;
+
+     err = nbClearBuffers(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing buffer clearing kernel");
+        return NBODY_CL_ERROR;
+    }
+
+
     gettimeofday(&start[0], NULL);
     err = nbBoundingBox(st, CL_TRUE);
     if (err != CL_SUCCESS)
@@ -2692,13 +2701,13 @@ NBodyStatus nbRunTreeConstruction(const NBodyCtx* ctx, NBodyState* st, gpuData* 
     }
     gettimeofday(&end[4], NULL);
 
-    if(st->step < ctx->nStep - 1){
-        err = nbClearBuffers(st, CL_TRUE);
-        if(err != CL_SUCCESS){
-            mwPerrorCL(err, "Error executing buffer clearing kernel");
-            return NBODY_CL_ERROR;
-        }
-    }
+    // if(st->step < ctx->nStep - 1){
+    //     err = nbClearBuffers(st, CL_TRUE);
+    //     if(err != CL_SUCCESS){
+    //         mwPerrorCL(err, "Error executing buffer clearing kernel");
+    //         return NBODY_CL_ERROR;
+    //     }
+    // }
     return CL_SUCCESS;
 }
 //TODO: Write Barnes-Hut kernel handler
@@ -2721,7 +2730,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     writeGPUBuffers(st, &gData);
     //HANDLE RUNNING BOUNDING BOX HERE:
     gettimeofday(&start[5], NULL);
-    // nbRunTreeConstruction(ctx, st, &gData, start, end);
+    nbRunTreeConstruction(ctx, st, &gData, start, end);
     while(st->step < ctx->nStep){
         
         err = nbAdvanceHalfVelocityTreecode(st, CL_TRUE);
@@ -2810,6 +2819,8 @@ NBodyStatus nbStripBodiesSoA(NBodyState* st, gpuData* gData){ //Function to stri
   int n = st->effNBody;
   for(int i = 0; i < n; ++i){
     if(i < st->nbody){
+        printf("A: (%6.2f, %6.2f, %6.2f)\t V: (%6.2f, %6.2f, %f)\t P: (%6.2f, %6.2f, %6.2f)\t M: %.2f\n",
+                gData->acc[0][i], gData->acc[1][i], gData->acc[2][i], gData->vel[0][i], gData->vel[1][i], gData->vel[2][i], gData->pos[0][i], gData->pos[1][i], gData->pos[2][i], gData->mass[i]);
         st->bodytab[i].bodynode.pos.x = gData->pos[0][i];
         st->bodytab[i].bodynode.pos.y = gData->pos[1][i];
         st->bodytab[i].bodynode.pos.z = gData->pos[2][i];

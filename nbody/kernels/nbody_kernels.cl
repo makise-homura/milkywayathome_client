@@ -244,7 +244,7 @@ typedef struct node
     
     int children[8];
 
-    uint next;
+    int next;
     uint more;
 
     uint prefix;
@@ -1678,16 +1678,15 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
 
     int2 range = findRange(mCodes_G, EFFNBODY, g);
-    gpuBinaryTree[g + offset].mass = mass[g];
+    gpuBinaryTree[g + offset].mass = mad(mass[g], (range.y - range.x), mass[g]);
     gpuBinaryTree[g + offset].pos[0] = mass[g] * x[g];
     gpuBinaryTree[g + offset].pos[1] = mass[g] * y[g];
     gpuBinaryTree[g + offset].pos[2] = mass[g] * z[g];
     for(int i = range.x; i < range.y; ++i){
-        real com_[3] = {0};
-        gpuBinaryTree[g + offset].mass += mass[i];
-        gpuBinaryTree[g + offset].pos[0] += mass[i] * x[i];
-        gpuBinaryTree[g + offset].pos[1] += mass[i] * y[i];
-        gpuBinaryTree[g + offset].pos[2] += mass[i] * z[i];
+        // gpuBinaryTree[g + offset].mass += mass[i];
+        gpuBinaryTree[g + offset].pos[0] = mad(mass[i], x[i], gpuBinaryTree[g + offset].pos[0]);
+        gpuBinaryTree[g + offset].pos[1] = mad(mass[i], y[i], gpuBinaryTree[g + offset].pos[1]);
+        gpuBinaryTree[g + offset].pos[2] = mad(mass[i], z[i], gpuBinaryTree[g + offset].pos[2]);
     }
     gpuBinaryTree[g + offset].pos[0] = gpuBinaryTree[g + offset].pos[0]/gpuBinaryTree[g + offset].mass;
     gpuBinaryTree[g + offset].pos[1] = gpuBinaryTree[g + offset].pos[1]/gpuBinaryTree[g + offset].mass;
@@ -1976,8 +1975,9 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
 
 
     //Sum to bodies in current cell
-    uint currentIndex = inclusiveTree[g].next;
+
     uint offset = GLOBALOFFSET;
+    uint currentIndex = offset;
     uint rootIndex = offset;
     real dx, dy, dz;
 
@@ -1988,13 +1988,14 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     real m2;
     real ai;
     real4 a;
+    ai = 0;
     a.x = a.y = a.z = 0;
 
     int numForceCalc = 0;
     do{
-        drVec.x = inclusiveTree[g].pos[0] - inclusiveTree[currentIndex].pos[0];
-        drVec.y = inclusiveTree[g].pos[1] - inclusiveTree[currentIndex].pos[1];
-        drVec.z = inclusiveTree[g].pos[2] - inclusiveTree[currentIndex].pos[2];
+        drVec.x = inclusiveTree[currentIndex].pos[0] - inclusiveTree[g].pos[0];
+        drVec.y = inclusiveTree[currentIndex].pos[1] - inclusiveTree[g].pos[1];
+        drVec.z = inclusiveTree[currentIndex].pos[2] - inclusiveTree[g].pos[2];
         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
         if((inclusiveTree[currentIndex].isBody) || (dr2 >= inclusiveTree[currentIndex].rCrit2)){
             if(currentIndex != g){
@@ -2107,6 +2108,6 @@ kernel void computeNodeStats(RVPtr x, RVPtr y, RVPtr z,
     uint denom = (1 << inclusiveTree[g + offset].treeLevel);
     inclusiveTree[g + offset].radius = sqrt(dx*dx + dy*dy + dz*dz)/denom;
     
-    inclusiveTree[g + offset].rCrit2 = inclusiveTree[g + offset].radius * inclusiveTree[g + offset].radius;
+    inclusiveTree[g + offset].rCrit2 = 900 * inclusiveTree[g + offset].radius * inclusiveTree[g + offset].radius;
 
 }
