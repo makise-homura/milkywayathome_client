@@ -12,7 +12,7 @@ if("-b" in sys.argv):
 
 os.system('rm -r ../results')
 os.system('mkdir ../results')
-os.system('rm GPUBRUTE.out')
+os.system('rm GPUData.out')
 os.system('rm GPUACCTEST.out')
 
 # print "RUNNING GPU SYSTEM:"
@@ -22,6 +22,8 @@ if("-b" in sys.argv):
     os.system('make -j 9')
 if("-m" in sys.argv):
     os.system('make -j 9')
-executeString = './bin/milkyway_nbody -f ../milkywayathome_client/nbody/sample_workunits/for_developers.lua -o GPUBRUTE.out -z GPU.hist -b -i 4 1 .2 .2 12 .2' #>> GPUACCTEST.out'
+executeString = './bin/milkyway_nbody -f ../milkywayathome_client/nbody/sample_workunits/for_developers.lua -o GPUData.out -z GPU.hist -b -i 4 1 .2 .2 12 .2' #>> GPUACCTEST.out'
 os.system(executeString)
 os.chdir('../milkywayathome_client')
+executeString = 'python2 PlotSingleNbody.py GPUData.out'
+# os.system()

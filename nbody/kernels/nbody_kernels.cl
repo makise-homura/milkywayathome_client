@@ -1698,40 +1698,20 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     uint delta = clz(mCodes_G[split]^mCodes_G[split+1]) - 2;
     gpuBinaryTree[g + offset].delta = delta;    
     if(split == range.x){
-        // inclusiveTree[split].delta = delta;
-
-        //old indexing
         gpuBinaryTree[g + offset].children[0] = split;
-        // inclusiveTree[split].parent = g;
-
-        //new indexing
-        
     }
     else{
-        //old indexing
         gpuBinaryTree[g + offset].children[0] = split + offset;
         gpuBinaryTree[split + offset].parent = g + offset;
-
-        //new indexing
     }
 
     if(split + 1 == range.y){
-        // inclusiveTree[split + 1].delta = delta;
-
-        //old indexing
         gpuBinaryTree[g + offset].children[1] = split + 1;
-        // inclusiveTree[split + 1].parent = g;
-
-        //new indexing
     }
     else{
-        //old indexing
         gpuBinaryTree[g + offset].children[1] = split + 1 + offset;
         gpuBinaryTree[split + 1 + offset].parent = g + offset;
-
-        //new indexing
     }
-    
     gpuBinaryTree[g + offset].prefix = mCodes_G[g];
     gpuBinaryTree[g + offset].prefix >>= (30 - delta);\
 
@@ -2032,6 +2012,13 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
             currentIndex = inclusiveTree[currentIndex].more;
         }
     }while(currentIndex != rootIndex);
+    if(USE_EXTERNAL_POTENTIAL)
+    {
+        real4 externAcc = externalAcceleration(inclusiveTree[g].pos[0], inclusiveTree[g].pos[1], inclusiveTree[g].pos[2]);
+        a.z += externAcc.x;
+        a.y += externAcc.y;
+        a.z += externAcc.z;
+    }
     inclusiveTree[g].acc[0] = a.x;
     inclusiveTree[g].acc[1] = a.y;
     inclusiveTree[g].acc[2] = a.z;
@@ -2121,13 +2108,5 @@ kernel void computeNodeStats(RVPtr x, RVPtr y, RVPtr z,
     inclusiveTree[g + offset].radius = sqrt(dx*dx + dy*dy + dz*dz)/denom;
     
     inclusiveTree[g + offset].rCrit2 = inclusiveTree[g + offset].radius * inclusiveTree[g + offset].radius;
-
-}
-
-kernel void advanceHalfVelocityTreecode(NVPtr inclusiveTree){
-
-}
-
-kernel void advancePositionTreecode(NVPtr inclusiveTree){
 
 }

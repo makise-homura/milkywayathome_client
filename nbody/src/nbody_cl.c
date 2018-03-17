@@ -1551,6 +1551,78 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     return CL_SUCCESS;
 }
 
+static cl_int nbAdvanceHalfVelocityTreecode(NBodyState* st, cl_bool updateState)
+{
+    cl_int err;
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event integrateEv;
+    cl_kernel velKern;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+    
+    velKern = kernels->advanceHalfVelocity;
+    global[0] = st->effNBody;
+    local[0] = ws->local[0];
+    
+    cl_event ev;
+    err |= nbSetMemArrayArgs(kernels->advanceHalfVelocity, st->nbb->pos, 0);
+    err |= nbSetMemArrayArgs(kernels->advanceHalfVelocity, st->nbb->vel, 3);
+    err |= nbSetMemArrayArgs(kernels->advanceHalfVelocity, st->nbb->acc, 6);
+    err |= clSetKernelArg(kernels->advanceHalfVelocity, 9, sizeof(cl_mem), &(st->nbb->mass));
+    err = clEnqueueNDRangeKernel(ci->queue, velKern, 1,
+                                    0, global, local,
+                                    0, NULL, &ev);
+    if (err != CL_SUCCESS)
+        return err;
+    clWaitForEvents(1, &ev);
+    clFinish(ci->queue);
+    return CL_SUCCESS;
+}
+
+static cl_int nbAdvancePositionTreecode(NBodyState* st, cl_bool updateState)
+{
+    cl_int err;
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event integrateEv;
+    cl_kernel posKern;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+    
+    posKern = kernels->advancePosition;
+    global[0] = st->effNBody;
+    local[0] = ws->local[0];
+    
+    cl_event ev;
+    err |= nbSetMemArrayArgs(kernels->advancePosition, st->nbb->pos, 0);
+    err |= nbSetMemArrayArgs(kernels->advancePosition, st->nbb->vel, 3);
+    err |= nbSetMemArrayArgs(kernels->advancePosition, st->nbb->acc, 6);
+    err |= clSetKernelArg(kernels->advancePosition, 9, sizeof(cl_mem), &(st->nbb->mass));
+    err |= clEnqueueNDRangeKernel(ci->queue, posKern, 1,
+                                    0, global, local,
+                                    0, NULL, &ev);
+    if (err != CL_SUCCESS)
+        return err;
+    clWaitForEvents(1, &ev);
+    clFinish(ci->queue);
+    return CL_SUCCESS;
+}
+
 
 
 
@@ -2571,6 +2643,64 @@ void printDebugBodies(const NBodyCtx* ctx, NBodyState* st, gpuData gData){
     }
 }
 
+NBodyStatus nbRunTreeConstruction(const NBodyCtx* ctx, NBodyState* st, gpuData* gDataP,
+                                     struct timeval* start, struct timeval* end){
+    cl_int err;
+    gettimeofday(&start[0], NULL);
+    err = nbBoundingBox(st, CL_TRUE);
+    if (err != CL_SUCCESS)
+    {
+        mwPerrorCL(err, "Error executing bounding box kernel");
+        return NBODY_CL_ERROR;
+    }
+    gettimeofday(&end[0], NULL);
+
+    gettimeofday(&start[1], NULL);
+    //RUN TREE CONSTRUCTION KERNEL:
+    err = nbEncodeTree(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing tree construction kernel");
+        return NBODY_CL_ERROR;
+    }
+    gettimeofday(&end[1], NULL);
+
+    gettimeofday(&start[2], NULL);
+    err = nbBitonicMortonSort(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing morton sorting kernel");
+        return NBODY_CL_ERROR;
+    }
+    gettimeofday(&end[2], NULL);
+
+    gettimeofday(&start[3], NULL);
+    err = nbConstructTree(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing tree construction kernel");
+        return NBODY_CL_ERROR;
+    }
+    gettimeofday(&end[3], NULL);
+
+    // printDebugStatus(ctx, st, &gData);
+    // printf("STEP: %d\n", st->step);
+    // readGPUBuffers(st, &gData);
+
+    gettimeofday(&start[4], NULL);
+    err = nbForceCalculationTreecode(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing force calculation kernel");
+        return NBODY_CL_ERROR;
+    }
+    gettimeofday(&end[4], NULL);
+
+    if(st->step < ctx->nStep - 1){
+        err = nbClearBuffers(st, CL_TRUE);
+        if(err != CL_SUCCESS){
+            mwPerrorCL(err, "Error executing buffer clearing kernel");
+            return NBODY_CL_ERROR;
+        }
+    }
+    return CL_SUCCESS;
+}
 //TODO: Write Barnes-Hut kernel handler
 NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
 {
@@ -2589,67 +2719,32 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     struct timeval start[6], end[6];
     // sleep(1);
     writeGPUBuffers(st, &gData);
-
-
     //HANDLE RUNNING BOUNDING BOX HERE:
     gettimeofday(&start[5], NULL);
+    // nbRunTreeConstruction(ctx, st, &gData, start, end);
     while(st->step < ctx->nStep){
         
-        /////////////////////////////////////////////////////////////////////
-        //TREE CONSTRUCTION
-        gettimeofday(&start[0], NULL);
-        err = nbBoundingBox(st, CL_TRUE);
+        err = nbAdvanceHalfVelocityTreecode(st, CL_TRUE);
         if (err != CL_SUCCESS)
         {
-            mwPerrorCL(err, "Error executing bounding box kernel");
+            mwPerrorCL(err, "Error executing half velocity kernel");
             return NBODY_CL_ERROR;
         }
-        gettimeofday(&end[0], NULL);
-
-        gettimeofday(&start[1], NULL);
-        //RUN TREE CONSTRUCTION KERNEL:
-        err = nbEncodeTree(st, CL_TRUE);
-        if(err != CL_SUCCESS){
-            mwPerrorCL(err, "Error executing tree construction kernel");
+        err = nbAdvancePositionTreecode(st, CL_TRUE);
+        if (err != CL_SUCCESS)
+        {
+            mwPerrorCL(err, "Error executing advance position kernel");
             return NBODY_CL_ERROR;
         }
-        gettimeofday(&end[1], NULL);
-
-        gettimeofday(&start[2], NULL);
-        err = nbBitonicMortonSort(st, CL_TRUE);
-        if(err != CL_SUCCESS){
-            mwPerrorCL(err, "Error executing morton sorting kernel");
+        err = nbAdvanceHalfVelocityTreecode(st, CL_TRUE);
+        if (err != CL_SUCCESS)
+        {
+            mwPerrorCL(err, "Error executing half velocity kernel");
             return NBODY_CL_ERROR;
         }
-        gettimeofday(&end[2], NULL);
-
-        gettimeofday(&start[3], NULL);
-        err = nbConstructTree(st, CL_TRUE);
-        if(err != CL_SUCCESS){
-            mwPerrorCL(err, "Error executing tree construction kernel");
-            return NBODY_CL_ERROR;
-        }
-        gettimeofday(&end[3], NULL);
-
-        // printDebugStatus(ctx, st, &gData);
-        // printf("STEP: %d\n", st->step);
-        // readGPUBuffers(st, &gData);
-
-        gettimeofday(&start[4], NULL);
-        err = nbForceCalculationTreecode(st, CL_TRUE);
-        if(err != CL_SUCCESS){
-            mwPerrorCL(err, "Error executing force calculation kernel");
-            return NBODY_CL_ERROR;
-        }
-        gettimeofday(&end[4], NULL);
-
-        if(st->step < ctx->nStep - 1){
-            err = nbClearBuffers(st, CL_TRUE);
-            if(err != CL_SUCCESS){
-                mwPerrorCL(err, "Error executing buffer clearing kernel");
-                return NBODY_CL_ERROR;
-            }
-        }
+        /////////////////////////////////////////////////////////////////////
+        //TREE CONSTRUCTION
+        nbRunTreeConstruction(ctx, st, &gData, start, end);
         ++st->step;
     }
     gettimeofday(&end[5], NULL);
@@ -2697,6 +2792,10 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("%.4f ms\n", (((real)end[5].tv_sec + (real)end[5].tv_usec * (1.0/1000000)) - ((real)start[5].tv_sec + (real)start[5].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
+    nbStripBodiesSoA(st, &gData);
+    NBodyStatus rc = nbMakeTree(ctx, st);
+    if (nbStatusIsFatal(rc))
+        return rc;
     destroyGPUDataArrays(st, &gData);
 }
 
