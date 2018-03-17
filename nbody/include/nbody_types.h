@@ -207,16 +207,9 @@ typedef struct MW_ALIGN_TYPE
 typedef struct _gpuNode _gpuNode;
 
 typedef struct _gpuNode{
-    _gpuNode* parentP;
-    _gpuNode* subP[8];
-
-    _gpuNode* nextP;
-    _gpuNode* moreP;
-    
     uint parent;
     
     int children[8];
-    int leafIndex[8];
 
     uint next;
     uint more;
@@ -228,10 +221,7 @@ typedef struct _gpuNode{
     uint treeLevel;
     uint mortonCode;
 
-    uint lock;
-
     uint id;
-    uint chid[2];
 
     uint pid;
 
@@ -240,10 +230,8 @@ typedef struct _gpuNode{
 
     real mass;
     real pos[3];
+    real vel[3];
     real acc[3];
-
-    real massEnclosed;
-    real com[3];
 
 }gpuNode;
 
@@ -265,10 +253,6 @@ typedef struct{
     cl_mem gpuTree;
 
     cl_mem inclusiveTree;
-
-    cl_mem gpuOctree;
-
-    cl_mem zeroTree;
 
     cl_mem nodeCounts;
     cl_mem swap;
@@ -384,7 +368,6 @@ typedef struct
     uint32_t* nodeCounts;
     
     gpuNode* gpuTree;
-    gpuNode* gpuOctree;
     gpuNode* inclusiveTree;
 
 }gpuData;

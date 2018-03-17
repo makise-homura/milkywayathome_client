@@ -239,16 +239,10 @@ typedef __global uint* restrict UVPtr;
 typedef struct node node;
 typedef struct node
 {
-    node* parentP;
-    node* subP[8];
-
-    node* nextP;
-    node* moreP;
 
     uint parent;
     
     int children[8];
-    int leafIndex[8];
 
     uint next;
     uint more;
@@ -260,10 +254,7 @@ typedef struct node
     uint treeLevel;
     uint mortonCode;
 
-    uint lock;
-
     uint id;
-    uint chid[2];
 
     uint pid;
 
@@ -272,10 +263,8 @@ typedef struct node
 
     real mass;
     real pos[3];
+    real vel[3];
     real acc[3];
-
-    real massEnclosed;
-    real com[3];
     
 }node;
 
@@ -1712,7 +1701,6 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
         // inclusiveTree[split].delta = delta;
 
         //old indexing
-        gpuBinaryTree[g + offset].leafIndex[0] = split;
         gpuBinaryTree[g + offset].children[0] = split;
         // inclusiveTree[split].parent = g;
 
@@ -1731,7 +1719,6 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
         // inclusiveTree[split + 1].delta = delta;
 
         //old indexing
-        gpuBinaryTree[g + offset].leafIndex[1] = split + 1;
         gpuBinaryTree[g + offset].children[1] = split + 1;
         // inclusiveTree[split + 1].parent = g;
 
@@ -1860,7 +1847,6 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
         if(count > 0){
             for(int i = 0; i < count; ++i){
                 for(int j = 0; j < 8; ++j){
-                    inclusiveTree[index + i].leafIndex[j] = -1;
                     inclusiveTree[index + i].children[j] = offset;    
                 }
                 inclusiveTree[index + i].treeLevel = gpuBinaryTree[g + offset].delta/3 - (count - 1 - i);
@@ -1903,7 +1889,6 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
         inclusiveTree[g + offset].prefix = 0;
         inclusiveTree[g + offset].parent = 0 + offset;
         for(int j = 0; j < 8; ++j){
-            inclusiveTree[g + offset].leafIndex[j] = -1;
             inclusiveTree[g + offset].children[j] = offset;   
         }
 
@@ -2047,9 +2032,12 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
             currentIndex = inclusiveTree[currentIndex].more;
         }
     }while(currentIndex != rootIndex);
-    inclusiveTree[currentIndex].acc[0] = a.x;
-    inclusiveTree[currentIndex].acc[1] = a.y;
-    inclusiveTree[currentIndex].acc[2] = a.z;
+    inclusiveTree[g].acc[0] = a.x;
+    inclusiveTree[g].acc[1] = a.y;
+    inclusiveTree[g].acc[2] = a.z;
+    ax[g] = a.x;
+    ay[g] = a.y;
+    az[g] = a.z;
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
@@ -2089,22 +2077,24 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
     ax[g] = 0;
     ay[g] = 0;
     az[g] = 0;
-    inclusiveTree[g].parent = gpuBinaryTree[g].parent = 0;
-    inclusiveTree[g].next = gpuBinaryTree[g].next = 0 + offset;
-    inclusiveTree[g].more = gpuBinaryTree[g].more = 0 + offset;
-    inclusiveTree[g].prefix = gpuBinaryTree[g].prefix = 0;
-    inclusiveTree[g].delta = gpuBinaryTree[g].delta = 0;
-    inclusiveTree[g].treeLevel = gpuBinaryTree[g].treeLevel = 0;
-    inclusiveTree[g].mortonCode = gpuBinaryTree[g].mortonCode = 0;
-    inclusiveTree[g].id = gpuBinaryTree[g].id = 0;
-    inclusiveTree[g].pid = gpuBinaryTree[g].pid = 0;
-    inclusiveTree[g].mass = gpuBinaryTree[g].mass = 0;
-    for(int i = 0; i < 8; ++i){
-       inclusiveTree[g].children[i] = gpuBinaryTree[g].children[i] = 0;
-       inclusiveTree[g].leafIndex[i] = gpuBinaryTree[g].leafIndex[i] = -1;
-    }
-    for(int i = 0; i < 3; ++i){
-        inclusiveTree[g].pos[i] = gpuBinaryTree[g].pos[i] = 0;
+    for(int i = 0; i < 2; ++i){ //have to zero 2*EFFNBODY slots
+        int idx = g + offset * i;
+        inclusiveTree[idx].parent = gpuBinaryTree[idx].parent = 0;
+        inclusiveTree[idx].next = gpuBinaryTree[idx].next = 0 + offset;
+        inclusiveTree[idx].more = gpuBinaryTree[idx].more = 0 + offset;
+        inclusiveTree[idx].prefix = gpuBinaryTree[idx].prefix = 0;
+        inclusiveTree[idx].delta = gpuBinaryTree[idx].delta = 0;
+        inclusiveTree[idx].treeLevel = gpuBinaryTree[idx].treeLevel = 0;
+        inclusiveTree[idx].mortonCode = gpuBinaryTree[idx].mortonCode = 0;
+        inclusiveTree[idx].id = gpuBinaryTree[idx].id = 0;
+        inclusiveTree[idx].pid = gpuBinaryTree[idx].pid = 0;
+        inclusiveTree[idx].mass = gpuBinaryTree[idx].mass = 0;
+        for(int i = 0; i < 8; ++i){
+        inclusiveTree[idx].children[i] = gpuBinaryTree[idx].children[i] = 0;
+        }
+        for(int i = 0; i < 3; ++i){
+            inclusiveTree[idx].pos[i] = gpuBinaryTree[idx].pos[i] = 0;
+        }
     }
 }
 
@@ -2131,5 +2121,13 @@ kernel void computeNodeStats(RVPtr x, RVPtr y, RVPtr z,
     inclusiveTree[g + offset].radius = sqrt(dx*dx + dy*dy + dz*dz)/denom;
     
     inclusiveTree[g + offset].rCrit2 = inclusiveTree[g + offset].radius * inclusiveTree[g + offset].radius;
+
+}
+
+kernel void advanceHalfVelocityTreecode(NVPtr inclusiveTree){
+
+}
+
+kernel void advancePositionTreecode(NVPtr inclusiveTree){
 
 }

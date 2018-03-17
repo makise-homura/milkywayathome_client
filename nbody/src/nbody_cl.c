@@ -1806,7 +1806,6 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
         st->nbb->bodyParents = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->mCodes = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->iteration = mwCreateZeroReadWriteBuffer(ci, sizeof(uint32_t));
-        st->nbb->zeroTree = mwCreateZeroReadWriteBuffer(ci, n  * sizeof(gpuNode));
         for(int i = 0; i < 3; ++i){
             st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
             st->nbb->min[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
@@ -2596,6 +2595,8 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     gettimeofday(&start[5], NULL);
     while(st->step < ctx->nStep){
         
+        /////////////////////////////////////////////////////////////////////
+        //TREE CONSTRUCTION
         gettimeofday(&start[0], NULL);
         err = nbBoundingBox(st, CL_TRUE);
         if (err != CL_SUCCESS)
