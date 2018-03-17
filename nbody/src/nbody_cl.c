@@ -511,6 +511,7 @@ cl_int nbReleaseKernels(NBodyState* st)
     err |= clReleaseKernel_quiet(kernels->threadOctree);
     err |= clReleaseKernel_quiet(kernels->forceCalculationTreecode);
     err |= clReleaseKernel_quiet(kernels->zeroBuffers);
+    err |= clReleaseKernel_quiet(kernels->computeNodeStats);
 
 //     err |= clReleaseKernel_quiet(kernels->buildTreeClear);
 //     err |= clReleaseKernel_quiet(kernels->buildTree);
@@ -1326,8 +1327,7 @@ static cl_int nbClearBuffers(NBodyState* st, cl_bool updateState)
     err |= clSetKernelArg(kernels->zeroBuffers, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
     err |= clSetKernelArg(kernels->zeroBuffers, 20, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err |= clSetKernelArg(kernels->zeroBuffers, 21, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err |= clSetKernelArg(kernels->zeroBuffers, 22, sizeof(cl_mem), &(st->nbb->gpuOctree));
-    err |= clSetKernelArg(kernels->zeroBuffers, 23, sizeof(cl_mem), &(st->nbb->swap));
+    err |= clSetKernelArg(kernels->zeroBuffers, 22, sizeof(cl_mem), &(st->nbb->swap));
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->zeroBuffers, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
@@ -1458,7 +1458,6 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     err = clSetKernelArg(kernels->constructOctTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->constructOctTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err = clSetKernelArg(kernels->constructOctTree, 21, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->constructOctTree, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
@@ -1475,7 +1474,6 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     err = clSetKernelArg(kernels->linkOctree, 19, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->linkOctree, 20, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->linkOctree, 21, sizeof(cl_mem), &(st->nbb->nodeCounts));
-    err = clSetKernelArg(kernels->linkOctree, 22, sizeof(cl_mem), &(st->nbb->gpuOctree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
@@ -1500,13 +1498,12 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
                                 0, global, NULL,
                                 0, NULL, &ev);
 
-    global[0] = 2 * st->effNBody;
+    global[0] += st->effNBody;
     err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->threadOctree, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
 
-    free(nC);
 
 
     // err |= clEnqueueBarrier(ci->queue);
@@ -1514,6 +1511,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     //     return err;
 
     clFinish(ci->queue);
+    free(nC);
     return CL_SUCCESS;
 }
 
@@ -1708,7 +1706,6 @@ static cl_int _nbReleaseBuffers(NBodyBuffers* nbb)
     err |= clReleaseMemObject_quiet(nbb->iteration);
     err |= clReleaseMemObject_quiet(nbb->gpuTree);
     err |= clReleaseMemObject_quiet(nbb->inclusiveTree);
-    err |= clReleaseMemObject_quiet(nbb->gpuOctree);
     err |= clReleaseMemObject_quiet(nbb->nodeCounts);
     err |= clReleaseMemObject_quiet(nbb->swap);
     err |= clReleaseMemObject_quiet(nbb->bodyParents);
@@ -1809,7 +1806,6 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
         st->nbb->bodyParents = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->mCodes = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->iteration = mwCreateZeroReadWriteBuffer(ci, sizeof(uint32_t));
-        st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
         st->nbb->zeroTree = mwCreateZeroReadWriteBuffer(ci, n  * sizeof(gpuNode));
         for(int i = 0; i < 3; ++i){
             st->nbb->max[i] = mwCreateZeroReadWriteBuffer(ci, n * sizeof(real));
@@ -1817,7 +1813,6 @@ cl_int nbCreateBuffers(const NBodyCtx* ctx, NBodyState* st)
         }
         st->nbb->gpuTree = mwCreateZeroReadWriteBuffer(ci, 2 * n * sizeof(gpuNode));
         st->nbb->inclusiveTree = mwCreateZeroReadWriteBuffer(ci, 2 * n * sizeof(gpuNode));
-        st->nbb->gpuOctree = mwCreateZeroReadWriteBuffer(ci, n * sizeof(gpuNode));
         st->nbb->nodeCounts = mwCreateZeroReadWriteBuffer(ci, n * sizeof(uint32_t));
         st->nbb->swap = mwCreateZeroReadWriteBuffer(ci, n* sizeof(uint32_t));
     }
@@ -2215,10 +2210,29 @@ void initGPUDataArrays(NBodyState* st, gpuData* gData){
   gData->mass = calloc(n, sizeof(real));
   gData->mCodes = calloc(n, sizeof(uint32_t));
   gData->bodyParents = calloc(n, sizeof(uint32_t));
-  gData->gpuTree = calloc(n, sizeof(gpuNode));
-  gData->gpuOctree = calloc(n, sizeof(gpuNode));
+  gData->gpuTree = calloc(2*n, sizeof(gpuNode));
   gData->inclusiveTree = calloc(2*n, sizeof(gpuNode));
   gData->nodeCounts = calloc(n, sizeof(uint32_t));
+}
+
+void destroyGPUDataArrays(NBodyState* st, gpuData* gData){
+    int n = st->effNBody;
+    for(int i = 0; i < 3; ++i){
+        free(gData->pos[i]);
+        free(gData->vel[i]);
+        free(gData->acc[i]);
+        if(!st->usesExact){
+        free(gData->max[i]);
+        free(gData->min[i]);
+        }
+    }
+    free(gData->mass);
+    free(gData->mCodes);
+    free(gData->bodyParents);
+    free(gData->gpuTree);
+    free(gData->inclusiveTree);
+    free(gData->nodeCounts);
+    gData = NULL;
 }
 
 void fillGPUDataOnlyBodies(NBodyState* st, gpuData* gData){
@@ -2682,7 +2696,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("%.4f ms\n", (((real)end[5].tv_sec + (real)end[5].tv_usec * (1.0/1000000)) - ((real)start[5].tv_sec + (real)start[5].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
-
+    destroyGPUDataArrays(st, &gData);
 }
 
 NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
