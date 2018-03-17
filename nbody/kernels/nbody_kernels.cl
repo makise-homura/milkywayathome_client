@@ -1997,7 +1997,8 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
         drVec.y = inclusiveTree[currentIndex].pos[1] - inclusiveTree[g].pos[1];
         drVec.z = inclusiveTree[currentIndex].pos[2] - inclusiveTree[g].pos[2];
         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
-        if((inclusiveTree[currentIndex].isBody) || (dr2 >= inclusiveTree[currentIndex].rCrit2)){
+        // if((inclusiveTree[currentIndex].isBody) || (dr2 >= inclusiveTree[currentIndex].rCrit2)){
+        if((inclusiveTree[currentIndex].isBody)){
             if(currentIndex != g){
                 ++numForceCalc;
                 real dr = sqrt(dr2);
@@ -2020,9 +2021,9 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
         a.y += externAcc.y;
         a.z += externAcc.z;
     }
-    inclusiveTree[g].acc[0] = a.x;
-    inclusiveTree[g].acc[1] = a.y;
-    inclusiveTree[g].acc[2] = a.z;
+    // inclusiveTree[g].acc[0] = a.x;
+    // inclusiveTree[g].acc[1] = a.y;
+    // inclusiveTree[g].acc[2] = a.z;
     ax[g] = a.x;
     ay[g] = a.y;
     az[g] = a.z;

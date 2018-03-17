@@ -1354,9 +1354,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     local[0] = ws->local[0];
     cl_event ev;
 
-    // err |= clEnqueueBarrier(ci->queue);
-    // if (err != CL_SUCCESS)
-    //     return err;
+    
 
     clFinish(ci->queue);
     // printf("NODE COUNTS:\n");
@@ -1367,6 +1365,10 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
     if (err != CL_SUCCESS)
     return err;
+
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
     // printf("BEGINNING TREE CONSTRUCTION\n");
     global[0] = st->effNBody - 1;
@@ -1394,6 +1396,9 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     if (err != CL_SUCCESS)
     return err;
 
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
     // STORE NODE COUNTS FOR INCLUSIVE PREFIX SUM:
     err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1405,6 +1410,10 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     if(err != CL_SUCCESS)
         return err;
 
+
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
     // PREFIX SUM UPSWEEP:
 
@@ -1426,6 +1435,10 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     }
 
 
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+
     //PREFIX SUM DOWNSWEEP:
     err = clSetKernelArg(kernels->prefixSumDownsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err = clSetKernelArg(kernels->prefixSumDownsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
@@ -1439,6 +1452,10 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
         return err;
     }
 
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+
     
     // ADD STORED NODE COUNTS FOR INCLUSIVE PREFIX SUM:
     global[0] = st->effNBody;
@@ -1449,6 +1466,11 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
         0, NULL, &ev);
         
     if(err != CL_SUCCESS)
+        return err;
+    
+
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
         return err;
     
     
@@ -1478,6 +1500,10 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     err = clEnqueueNDRangeKernel(ci->queue, kernels->linkOctree, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
+    
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
 
 
@@ -1498,6 +1524,10 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     err = clEnqueueNDRangeKernel(ci->queue, kernels->computeNodeStats, 1,
                                 0, global, NULL,
                                 0, NULL, &ev);
+    
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
     global[0] += st->effNBody;
     err = clSetKernelArg(kernels->threadOctree, 0, sizeof(cl_mem), &(st->nbb->inclusiveTree));
@@ -1507,9 +1537,9 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
 
 
-    // err |= clEnqueueBarrier(ci->queue);
-    // if (err != CL_SUCCESS)
-    //     return err;
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
 
     clFinish(ci->queue);
     free(nC);
