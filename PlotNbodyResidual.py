@@ -41,7 +41,7 @@ for i in range(len(x1)):
 
 
 plt.subplot(221)
-plt.plot(x1s,y1s, 'ob', label="GPU Data")
+plt.scatter(x1s,y1s, marker='o', s=0.5, label="GPU Data")
 # plt.xlim([-100,100])
 # plt.ylim([-100,100])
 legend = plt.legend(loc="upper right")
@@ -84,7 +84,7 @@ print "Number of bodies in y list: " + str(len(y2))
 
 
 plt.subplot(222)
-plt.plot(x2,y2, 'ob', label="CPU Data");
+plt.scatter(x2,y2, marker='o', s=0.5, label="CPU Data");
 # plt.xlim([-100,100])
 # plt.ylim([-100,100])
 legend = plt.legend(loc="upper right")
@@ -95,7 +95,7 @@ for i in range(len(x2s)):
 	y3.append(y2s[i]-y1s[i])
 
 plt.subplot(223)
-plt.plot(x3,y3, 'ob', label="Residual");
+plt.scatter(x3,y3, marker='o', s=0.5, label="Residual");
 legend = plt.legend(loc="upper right")
 
 r = []

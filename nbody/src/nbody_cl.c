@@ -2631,39 +2631,62 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
     printf("----------------------------\n");
     printf("GPU OCTREE:\n");
     int count[10] = {0};
-        for(int i = 0; i < octCount; ++i){
-            ++count[gData->inclusiveTree[i].treeLevel];
-            if(i == st->effNBody){
-                printf("-----------------------------------------------------\n");
-            }
-            printBinary(gData->inclusiveTree[i].prefix); 
-            printf("\tID: %d\tR: %.2f\t ME: %.3f\tCOM: (%6.2f, %6.2f, %6.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
-
-            for(int j = 0; j < 8; ++j){
-                if(gData->inclusiveTree[i].children[j] > offset){
-                    printf("(%d)\t", gData->inclusiveTree[i].children[j]);
-                }
-                else if(gData->inclusiveTree[i].children[j] < offset){
-                    printf("[%d]\t", gData->inclusiveTree[i].children[j]);
-                }
-                else{
-                    printf(" - \t");
-                }
-            }
-            printf("\n");
+    int numCollisions = 0;
+    for(int i = 0; i < octCount; ++i){
+        ++count[gData->inclusiveTree[i].treeLevel];
+        if(i == st->effNBody){
+            printf("-----------------------------------------------------\n");
         }
+        if(i < st->effNBody){
+            printBinary(gData->inclusiveTree[i].mortonCode);
+            printf("\tID: %d\tL: %d\tR: %.2f\t ME: %.3f\tCOM: (%6.2f, %6.2f, %6.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].treeLevel, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
+            for(int j = 0; j < 2; ++j){
+            if(gData->inclusiveTree[i+offset].children[j] > offset){
+                printf("(%d)\t", gData->gpuTree[i+offset].children[j]);
+            }
+            else if(gData->inclusiveTree[i+offset].children[j] < offset){
+                printf("[%d]\t", gData->gpuTree[i+offset].children[j]);
+            }
+            else{
+                printf(" - \t");
+            }
+        }
+        }
+        else{
+            printBinary(gData->inclusiveTree[i].prefix);
+            printf("\tID: %d\tL: %d\tR: %.2f\t ME: %.3f\tCOM: (%6.2f, %6.2f, %6.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].treeLevel, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
+            for(int j = 0; j < 8; ++j){
+            if(gData->inclusiveTree[i].children[j] > offset){
+                printf("(%d)\t", gData->inclusiveTree[i].children[j]);
+            }
+            else if(gData->inclusiveTree[i].children[j] < offset){
+                printf("[%d]\t", gData->inclusiveTree[i].children[j]);
+            }
+            else{
+                printf(" - \t");
+            }
+        }
+        }
+        if(i < (st->effNBody - 1) && gData->inclusiveTree[i].mortonCode == gData->inclusiveTree[i + 1].mortonCode){
+            printf("<");
+            ++numCollisions;
+        } 
 
-    printf("---------------------------\n");
-    printf("LEVEL INFORMATION:\n");
-    for(int i = 0; i < 10; ++i){
-        printf("Level %d: %d\n", i, count[i]);
+        printf("\n");
     }
+    printf("NUM COLLISIONS: %d\n", numCollisions);
 
-    printf("---------------------------\n");
-    printf("NODE COUNTS:\n");
-    for(int i = 0; i < st->effNBody; ++i){
-        printf("%d\n", gData->nodeCounts[i]);
-    }
+    // printf("---------------------------\n");
+    // printf("LEVEL INFORMATION:\n");
+    // for(int i = 0; i < 10; ++i){
+    //     printf("Level %d: %d\n", i, count[i]);
+    // }
+
+    // printf("---------------------------\n");
+    // printf("NODE COUNTS:\n");
+    // for(int i = 0; i < st->effNBody; ++i){
+    //     printf("%d\n", gData->nodeCounts[i]);
+    // }
 }
 
 void printDebugBodies(const NBodyCtx* ctx, NBodyState* st, gpuData gData){
@@ -2788,7 +2811,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     }
     gettimeofday(&end[5], NULL);
     readGPUBuffers(st, &gData);
-    // printDebugStatus(ctx, st, &gData);
+    printDebugStatus(ctx, st, &gData);
 
     printf("==============================\n");
     printf("BOUNDING BOX EXECUTION TIME:\n");

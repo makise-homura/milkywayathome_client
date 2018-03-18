@@ -63,7 +63,7 @@ static inline mwvector nbGravity(const NBodyCtx* ctx, NBodyState* st, const Body
         real drSq = mw_sqrv(dr);               /* and distance squared */
         
 
-        if (isBody(q) || (drSq >= Rcrit2(q)))      /* If is a body or far enough away to approximate */
+        if (isBody(q))// || (drSq >= Rcrit2(q)))      /* If is a body or far enough away to approximate */
         {
             if (mw_likely((const Body*) q != p))   /* self-interaction? */
             {
@@ -83,38 +83,38 @@ static inline mwvector nbGravity(const NBodyCtx* ctx, NBodyState* st, const Body
                 
                 //temp.mass = Mass(q);
 
-                if (ctx->useQuad && isCell(q))          /* if cell, add quad term */
-                {
-                    real dr5inv, drQdr, phiQ;
-                    mwvector Qdr;
+//                 if (ctx->useQuad && isCell(q))          /* if cell, add quad term */
+//                 {
+//                     real dr5inv, drQdr, phiQ;
+//                     mwvector Qdr;
                     
-//                     temp.Q = Quad(q);
-//                     temp.mass = -1;
+// //                     temp.Q = Quad(q);
+// //                     temp.mass = -1;
                     
 
-                    /* form Q * dr */
-                    Qdr.x = Quad(q).xx * dr.x + Quad(q).xy * dr.y + Quad(q).xz * dr.z;
-                    Qdr.y = Quad(q).xy * dr.x + Quad(q).yy * dr.y + Quad(q).yz * dr.z;
-                    Qdr.z = Quad(q).xz * dr.x + Quad(q).yz * dr.y + Quad(q).zz * dr.z;
+//                     /* form Q * dr */
+//                     Qdr.x = Quad(q).xx * dr.x + Quad(q).xy * dr.y + Quad(q).xz * dr.z;
+//                     Qdr.y = Quad(q).xy * dr.x + Quad(q).yy * dr.y + Quad(q).yz * dr.z;
+//                     Qdr.z = Quad(q).xz * dr.x + Quad(q).yz * dr.y + Quad(q).zz * dr.z;
 
 
-                    /* form dr * Q * dr */
-                    drQdr = Qdr.x * dr.x + Qdr.y * dr.y + Qdr.z * dr.z;
+//                     /* form dr * Q * dr */
+//                     drQdr = Qdr.x * dr.x + Qdr.y * dr.y + Qdr.z * dr.z;
 
-                    dr5inv = 1.0 / (sqr(drSq) * drab);  /* form dr^-5 */
+//                     dr5inv = 1.0 / (sqr(drSq) * drab);  /* form dr^-5 */
 
-                    /* get quad. part of phi */
-                    phiQ = 2.5 * (dr5inv * drQdr) / drSq;
+//                     /* get quad. part of phi */
+//                     phiQ = 2.5 * (dr5inv * drQdr) / drSq;
 
-                    acc0.x += phiQ * dr.x;
-                    acc0.y += phiQ * dr.y;
-                    acc0.z += phiQ * dr.z;
+//                     acc0.x += phiQ * dr.x;
+//                     acc0.y += phiQ * dr.y;
+//                     acc0.z += phiQ * dr.z;
 
-                    /* acceleration */
-                    acc0.x -= dr5inv * Qdr.x;
-                    acc0.y -= dr5inv * Qdr.y;
-                    acc0.z -= dr5inv * Qdr.z;
-                }
+//                     /* acceleration */
+//                     acc0.x -= dr5inv * Qdr.x;
+//                     acc0.y -= dr5inv * Qdr.y;
+//                     acc0.z -= dr5inv * Qdr.z;
+//                 }
             }
             else
             {
