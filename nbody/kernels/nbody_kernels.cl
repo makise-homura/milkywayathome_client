@@ -1828,10 +1828,12 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
                 for(int j = 0; j < 8; ++j){
                     inclusiveTree[index + i].children[j] = offset;    
                 }
-                inclusiveTree[index + i].treeLevel = gpuBinaryTree[g + offset].id;///3 - (count - 1 - i);
+                inclusiveTree[index + i].treeLevel = gpuBinaryTree[g + offset].delta/3 - (count - 1 - i);
+                // inclusiveTree[index + i].treeLevel = gpuBinaryTree[gpuBinaryTree[g + offset].parent].delta/3 - (count - i);
                 // inclusiveTree[index + i].treeLevel = count;//(count - 1 + i);//gpuBinaryTree[g + offset].delta/3 - (count - 1 - i);
                 inclusiveTree[index + i].id = index + i;
-                inclusiveTree[index + i].prefix = mCodes_G[g] >> (30 - (3 * inclusiveTree[index + i].treeLevel));
+                inclusiveTree[index + i].mortonCode = mCodes_G[g];
+                inclusiveTree[index + i].prefix = mCodes_G[g] >> (30 - (3 * (inclusiveTree[index + i].treeLevel)));
                 inclusiveTree[index + i].pos[0] = gpuBinaryTree[g + offset].pos[0];
                 inclusiveTree[index + i].pos[1] = gpuBinaryTree[g + offset].pos[1];
                 inclusiveTree[index + i].pos[2] = gpuBinaryTree[g + offset].pos[2];
@@ -1852,16 +1854,18 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
                 testIndex = gpuBinaryTree[testIndex].parent;
             }
             if(testIndex != (0 + offset)){
-                inclusiveTree[index].parent = nodeCounts[testIndex - 1 - offset] + 1 + offset;
-                inclusiveTree[nodeCounts[testIndex - 1 - offset] + 1 + offset].children[childIndex] = inclusiveTree[index].id;
-                // inclusiveTree[index].children[childIndex] = 1;
+                uint numNestedChildren = nodeCounts[testIndex - offset] - nodeCounts[testIndex - 1 - offset] - 1;
+                // inclusiveTree[index].treeLevel = numNestedChildren;
+                inclusiveTree[index].parent = nodeCounts[testIndex - 1 - offset] + 1 + offset + numNestedChildren;
+                inclusiveTree[nodeCounts[testIndex - 1 - offset] + 1 + offset + numNestedChildren].children[childIndex] = inclusiveTree[index].id;
             }
             else{
                 inclusiveTree[index].parent = 0 + offset;
                 inclusiveTree[0 + offset].children[childIndex] = inclusiveTree[index].id;
-                // inclusiveTree[index].children[childIndex] = 1;
             }
         }
+
+        // inclusiveTree[index].treeLevel = 0;
     }
     else{
         inclusiveTree[g + offset].id = 0 + offset;
@@ -1900,19 +1904,26 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
     uint leafFound = 0;
     uint chunkLevel = 0;
 
+    uint degenerateMcode = 0;
+
+    if(g != 0){
+        degenerateMcode = mCodes_G[g] == mCodes_G[g - 1];
+    }
+    
     while(leafFound == 0){
         uint currentChunk = extractBits(mCodes_G[g], 9 - chunkLevel);
         if(inclusiveTree[index].children[currentChunk] > 0 + offset){
             index = inclusiveTree[index].children[currentChunk];
         }
         else{
-            inclusiveTree[index].children[currentChunk] = g;
-            inclusiveTree[g].parent = index;
-            inclusiveTree[g].prefix = currentChunk;
-            int i = 0;
-            while(mCodes_G[g] == mCodes_G[g + i]){
-                bodyParents[g + i] = index;
-                ++i;
+            if(!degenerateMcode){
+                inclusiveTree[index].children[currentChunk] = g;
+                inclusiveTree[g].parent = index;
+                inclusiveTree[g].prefix = currentChunk;
+            }
+            else{
+                inclusiveTree[g].parent = index;
+                inclusiveTree[g].prefix = currentChunk;
             }
             leafFound = 1;
         }
@@ -2026,12 +2037,9 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
         else{
                 currentIndex = inclusiveTree[currentIndex].more;
         }
-    // }while(currentIndex != rootIndex);
-    ++i;
-    if(currentIndex == rootIndex){
-        break;
-    }
-    }while(i < 129);
+        ++i;
+    }while(currentIndex != rootIndex);
+    // }while(i < 1552);
     if(USE_EXTERNAL_POTENTIAL)
     {
         real4 externAcc = externalAcceleration(inclusiveTree[g].pos[0], inclusiveTree[g].pos[1], inclusiveTree[g].pos[2]);

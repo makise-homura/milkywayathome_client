@@ -2641,16 +2641,16 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
             printBinary(gData->inclusiveTree[i].mortonCode);
             printf("\tID: %d\tL: %d\tR: %.2f\t ME: %.3f\tCOM: (%6.2f, %6.2f, %6.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].treeLevel, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
             for(int j = 0; j < 2; ++j){
-            if(gData->inclusiveTree[i+offset].children[j] > offset){
-                printf("(%d)\t", gData->gpuTree[i+offset].children[j]);
+                if(gData->inclusiveTree[i+offset].children[j] > offset){
+                    printf("(%d)\t", gData->gpuTree[i+offset].children[j]);
+                }
+                else if(gData->inclusiveTree[i+offset].children[j] < offset){
+                    printf("[%d]\t", gData->gpuTree[i+offset].children[j]);
+                }
+                else{
+                    printf(" - \t");
+                }
             }
-            else if(gData->inclusiveTree[i+offset].children[j] < offset){
-                printf("[%d]\t", gData->gpuTree[i+offset].children[j]);
-            }
-            else{
-                printf(" - \t");
-            }
-        }
         }
         else{
             printBinary(gData->inclusiveTree[i].prefix);
@@ -2869,11 +2869,12 @@ NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
 
 NBodyStatus nbStripBodiesSoA(NBodyState* st, gpuData* gData){ //Function to strip bodies out of GPU Tree
   printf("STRIPPING BODIES FROM BUFFER STRUCTURE\n");
+  printf("A: (%6.2f, %6.2f, %6.2f)\n", gData->acc[0][0], gData->acc[1][0], gData->acc[2][0]);
   int n = st->effNBody;
   for(int i = 0; i < n; ++i){
     if(i < st->nbody){
-        printf("A: (%6.2f, %6.2f, %6.2f)\t V: (%6.2f, %6.2f, %f)\t P: (%6.2f, %6.2f, %6.2f)\t M: %.2f\n",
-                gData->acc[0][i], gData->acc[1][i], gData->acc[2][i], gData->vel[0][i], gData->vel[1][i], gData->vel[2][i], gData->pos[0][i], gData->pos[1][i], gData->pos[2][i], gData->mass[i]);
+        // printf("A: (%6.2f, %6.2f, %6.2f)\t V: (%6.2f, %6.2f, %f)\t P: (%6.2f, %6.2f, %6.2f)\t M: %.2f\n",
+        //         gData->acc[0][i], gData->acc[1][i], gData->acc[2][i], gData->vel[0][i], gData->vel[1][i], gData->vel[2][i], gData->pos[0][i], gData->pos[1][i], gData->pos[2][i], gData->mass[i]);
         st->bodytab[i].bodynode.pos.x = gData->pos[0][i];
         st->bodytab[i].bodynode.pos.y = gData->pos[1][i];
         st->bodytab[i].bodynode.pos.z = gData->pos[2][i];
