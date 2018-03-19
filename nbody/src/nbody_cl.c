@@ -1490,7 +1490,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
         return err;
 
         
-    // // NODE COUNTS:
+    // NODE COUNTS:
         
     global[0] = st->effNBody;
     err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
@@ -2811,7 +2811,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     }
     gettimeofday(&end[5], NULL);
     readGPUBuffers(st, &gData);
-    printDebugStatus(ctx, st, &gData);
+    // printDebugStatus(ctx, st, &gData);
 
     printf("==============================\n");
     printf("BOUNDING BOX EXECUTION TIME:\n");
@@ -2868,8 +2868,8 @@ NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
 }
 
 NBodyStatus nbStripBodiesSoA(NBodyState* st, gpuData* gData){ //Function to strip bodies out of GPU Tree
-  printf("STRIPPING BODIES FROM BUFFER STRUCTURE\n");
-  printf("A: (%6.2f, %6.2f, %6.2f)\n", gData->acc[0][0], gData->acc[1][0], gData->acc[2][0]);
+//   printf("STRIPPING BODIES FROM BUFFER STRUCTURE\n");
+//   printf("A: (%6.2f, %6.2f, %6.2f)\n", gData->acc[0][0], gData->acc[1][0], gData->acc[2][0]);
   int n = st->effNBody;
   for(int i = 0; i < n; ++i){
     if(i < st->nbody){

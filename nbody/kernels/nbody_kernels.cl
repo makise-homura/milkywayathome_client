@@ -1825,9 +1825,9 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
         uint count = nodeCounts[g] - nodeCounts[g-1];
         if(count > 0){
             for(int i = 0; i < count; ++i){
-                for(int j = 0; j < 8; ++j){
-                    inclusiveTree[index + i].children[j] = offset;    
-                }
+                // for(int j = 0; j < 8; ++j){
+                //     inclusiveTree[index + i].children[j] = offset;    
+                // }
                 inclusiveTree[index + i].treeLevel = gpuBinaryTree[g + offset].delta/3 - (count - 1 - i);
                 // inclusiveTree[index + i].treeLevel = gpuBinaryTree[gpuBinaryTree[g + offset].parent].delta/3 - (count - i);
                 // inclusiveTree[index + i].treeLevel = count;//(count - 1 + i);//gpuBinaryTree[g + offset].delta/3 - (count - 1 - i);
@@ -1857,15 +1857,14 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
                 uint numNestedChildren = nodeCounts[testIndex - offset] - nodeCounts[testIndex - 1 - offset] - 1;
                 // inclusiveTree[index].treeLevel = numNestedChildren;
                 inclusiveTree[index].parent = nodeCounts[testIndex - 1 - offset] + 1 + offset + numNestedChildren;
-                inclusiveTree[nodeCounts[testIndex - 1 - offset] + 1 + offset + numNestedChildren].children[childIndex] = inclusiveTree[index].id;
+                inclusiveTree[inclusiveTree[index].parent].children[childIndex] = inclusiveTree[index].id;
             }
             else{
                 inclusiveTree[index].parent = 0 + offset;
                 inclusiveTree[0 + offset].children[childIndex] = inclusiveTree[index].id;
             }
+            // inclusiveTree[index].treeLevel = childIndex;
         }
-
-        // inclusiveTree[index].treeLevel = 0;
     }
     else{
         inclusiveTree[g + offset].id = 0 + offset;
@@ -1912,7 +1911,7 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
     
     while(leafFound == 0){
         uint currentChunk = extractBits(mCodes_G[g], 9 - chunkLevel);
-        if(inclusiveTree[index].children[currentChunk] > 0 + offset){
+        if(inclusiveTree[index].children[currentChunk] > (0 + offset)){
             index = inclusiveTree[index].children[currentChunk];
         }
         else{
@@ -2050,12 +2049,12 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     // inclusiveTree[g].acc[0] = a.x;
     // inclusiveTree[g].acc[1] = a.y;
     // inclusiveTree[g].acc[2] = a.z;
-    ax[g] = numForceCalc;
-    ay[g] = currentIndex;
-    az[g] = i;
-    // ax[g] = a.x;
-    // ay[g] = a.y;
-    // az[g] = a.z;
+    // ax[g] = numForceCalc;
+    // ay[g] = currentIndex;
+    // az[g] = i;
+    ax[g] = a.x;
+    ay[g] = a.y;
+    az[g] = a.z;
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
@@ -2109,7 +2108,7 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
         inclusiveTree[idx].mass = gpuBinaryTree[idx].mass = 0;
         inclusiveTree[idx].isBody = gpuBinaryTree[idx].isBody = 0;
         for(int i = 0; i < 8; ++i){
-        inclusiveTree[idx].children[i] = gpuBinaryTree[idx].children[i] = 0;
+            inclusiveTree[idx].children[i] = gpuBinaryTree[idx].children[i] = offset;
         }
         for(int i = 0; i < 3; ++i){
             inclusiveTree[idx].pos[i] = gpuBinaryTree[idx].pos[i] = 0;
