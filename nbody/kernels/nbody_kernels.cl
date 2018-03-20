@@ -2138,6 +2138,6 @@ kernel void computeNodeStats(RVPtr x, RVPtr y, RVPtr z,
     uint denom = (1 << inclusiveTree[g + offset].treeLevel);
     inclusiveTree[g + offset].radius = sqrt(dx*dx + dy*dy + dz*dz)/denom;
     
-    inclusiveTree[g + offset].rCrit2 = 9999999 + inclusiveTree[g + offset].radius * inclusiveTree[g + offset].radius;
+    inclusiveTree[g + offset].rCrit2 = inclusiveTree[g + offset].radius * inclusiveTree[g + offset].radius;
 
 }
