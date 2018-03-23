@@ -245,17 +245,15 @@ typedef struct{
     cl_mem max[3];
     cl_mem min[3];
 
-    cl_mem bodyParents;
-
     cl_mem mCodes;
     cl_mem iteration;
-
-    cl_mem gpuTree;
-
-    cl_mem inclusiveTree;
-
+    
     cl_mem nodeCounts;
     cl_mem swap;
+    
+    cl_mem gpuTree;
+    cl_mem inclusiveTree;
+
 
 
 }NBodyBuffers;
@@ -330,6 +328,7 @@ typedef struct
     cl_kernel zeroBuffers;
     cl_kernel createBodyNodes;
     cl_kernel computeNodeStats;
+    cl_kernel fillBufferFromSwap;
 //     cl_kernel buildTreeClear;
 //     cl_kernel buildTree;
 //     cl_kernel summarizationClear;

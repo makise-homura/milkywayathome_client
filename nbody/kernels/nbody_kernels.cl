@@ -1541,12 +1541,12 @@ __kernel void countDuplicates(UVPtr mCodes_G, UVPtr nodeCounts){
     }
 }
 
-__kernel void compactMortonCodes(UVPtr mCodes_G, UVPtr nodeCounts){
+__kernel void compactMortonCodes(UVPtr mCodes_G, UVPtr nodeCounts, UVPtr swap){
     uint g = (uint) get_global_id(0);
     uint mCode = mCodes_G[g];
     mCodes_G[g] = 0;
     barrier(CLK_GLOBAL_MEM_FENCE);
-    mCodes_G[g - nodeCounts[g]] = mCode;
+    swap[g - nodeCounts[g]] = mCode;
     // nodeCounts[g] = 0;
 }
 
@@ -1768,6 +1768,10 @@ __kernel void prefixClearSwap(UVPtr swap){
     uint g = (uint) get_global_id(0);
     swap[g] = 0;
 }
+__kernel void fillBufferFromSwap(UVPtr buffer, UVPtr swap){
+    uint g = (uint) get_global_id(0);
+    buffer[g] = swap[g];
+}
 
 __kernel void prefixSumInclusiveUtil(UVPtr nodeCounts, UVPtr swap){
     uint g = (uint) get_global_id(0);
@@ -1912,7 +1916,7 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration, UVPtr bodyParents,
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
                         NVPtr gpuBinaryTree, NVPtr inclusiveTree, UVPtr nodeCounts){
 
 
@@ -2013,7 +2017,7 @@ kernel void threadOctree(NVPtr inclusiveTree){
 kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
                                         RVPtr vx, RVPtr vy, RVPtr vz,
                                         RVPtr ax, RVPtr ay, RVPtr az,
-                                        RVPtr mass, UVPtr bodyParents, NVPtr inclusiveTree){
+                                        RVPtr mass, NVPtr inclusiveTree){
     uint g = (uint) get_global_id(0);
 
     //If center of mass of node is too close, particle must sum forces to all particles within that cell then go down another layer
@@ -2039,22 +2043,21 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     int numForceCalc = 0;
     int i = 0;
     do{
-        barrier(CLK_GLOBAL_MEM_FENCE);
+        // barrier(CLK_GLOBAL_MEM_FENCE);
         drVec.x = inclusiveTree[currentIndex].pos[0] - inclusiveTree[g].pos[0];
         drVec.y = inclusiveTree[currentIndex].pos[1] - inclusiveTree[g].pos[1];
         drVec.z = inclusiveTree[currentIndex].pos[2] - inclusiveTree[g].pos[2];
         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
-        // if((inclusiveTree[currentIndex].isBody) || (dr2 >= inclusiveTree[currentIndex].rCrit2)){
-        if((inclusiveTree[currentIndex].isBody)){
-            if(inclusiveTree[currentIndex].id != inclusiveTree[g].id){
-                ++numForceCalc;
-                real dr = sqrt(dr2);
-                m2 = inclusiveTree[currentIndex].mass;
-                ai = m2/(dr*dr2);
-                a.x += ai * drVec.x;
-                a.y += ai * drVec.y;
-                a.z += ai * drVec.z;
-            }
+        if((inclusiveTree[currentIndex].isBody) || (dr2 >= inclusiveTree[currentIndex].rCrit2)){
+        // if((inclusiveTree[currentIndex].isBody)){
+            ++numForceCalc;
+            int notSelf = inclusiveTree[currentIndex].id != inclusiveTree[g].id;
+            real dr = sqrt(dr2);
+            m2 = inclusiveTree[currentIndex].mass;
+            ai = m2/(dr*dr2);
+            a.x += ai * drVec.x * notSelf;
+            a.y += ai * drVec.y * notSelf;
+            a.z += ai * drVec.z * notSelf;
             currentIndex = inclusiveTree[currentIndex].next;
         }
         else{
@@ -2092,7 +2095,7 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
                         RVPtr ax, RVPtr ay, RVPtr az,
                         RVPtr mass, RVPtr xMax, RVPtr yMax,
                         RVPtr zMax, RVPtr xMin, RVPtr yMin,
-                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration, UVPtr bodyParents,
+                        RVPtr zMin, UVPtr mCodes_G, UVPtr iteration,
                         NVPtr gpuBinaryTree, NVPtr inclusiveTree, UVPtr nodeCounts, UVPtr swap){
 
     uint g = (uint) get_global_id(0);
@@ -2117,7 +2120,6 @@ kernel void zeroBuffers(RVPtr x, RVPtr y, RVPtr z,
     mCodes_G[g] = 0;
     nodeCounts[g] = 0;
     swap[g] = 0;
-    bodyParents[g] = 0;
     ax[g] = 0;
     ay[g] = 0;
     az[g] = 0;

@@ -50,7 +50,7 @@ best_like_start      = 0.5    -- what percent of sim to start
 use_vel_disps        = false    -- use velocity dispersions in likelihood
         
 timestep_control     = true   -- -- control number of steps    -- --
-Ntime_steps          = 1000     -- -- number of timesteps to run -- --
+Ntime_steps          = 10000     -- -- number of timesteps to run -- --
 
 -- -- -- -- -- -- -- -- -- DWARF STARTING LOCATION   -- -- -- -- -- -- -- --
 l  = 218
