@@ -2061,6 +2061,9 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
                 currentIndex = inclusiveTree[currentIndex].more;
         }
         ++i;
+        if(currentIndex > EFFNBODY + offset || currentIndex < 0){
+            break;
+        }
     }while(currentIndex != rootIndex);
     // }while(i < 1552);
     if(USE_EXTERNAL_POTENTIAL)
