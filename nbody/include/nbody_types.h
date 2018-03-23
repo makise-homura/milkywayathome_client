@@ -313,9 +313,12 @@ typedef struct
 {
     cl_kernel boundingBox;
     cl_kernel encodeTree;
+    cl_kernel countDuplicates;
+    cl_kernel compactMortonCodes;
     cl_kernel bitonicMortonSort;
     cl_kernel constructTree;
     cl_kernel countOctNodes;
+    cl_kernel prefixClearSwap;
     cl_kernel prefixSum;
     cl_kernel prefixSumInclusiveUtil;
     cl_kernel prefixSumUpsweep;

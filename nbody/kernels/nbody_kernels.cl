@@ -1531,6 +1531,25 @@ __kernel void encodeTree(RVPtr x, RVPtr y, RVPtr z,
   //Use global thread ID as a LSB identifier to seperate morton code collisions.
 }
 
+__kernel void countDuplicates(UVPtr mCodes_G, UVPtr nodeCounts){
+    uint g = (uint) get_global_id(0);
+    if(g > 0){
+        nodeCounts[g] = mCodes_G[g] == mCodes_G[g - 1];
+    }
+    else{
+        nodeCounts[g] = 0;
+    }
+}
+
+__kernel void compactMortonCodes(UVPtr mCodes_G, UVPtr nodeCounts){
+    uint g = (uint) get_global_id(0);
+    uint mCode = mCodes_G[g];
+    mCodes_G[g] = 0;
+    barrier(CLK_GLOBAL_MEM_FENCE);
+    mCodes_G[g - nodeCounts[g]] = mCode;
+    // nodeCounts[g] = 0;
+}
+
 __kernel void createBodyNodes(RVPtr x, RVPtr y, RVPtr z,
                             RVPtr vx, RVPtr vy, RVPtr vz,
                             RVPtr ax, RVPtr ay, RVPtr az,
@@ -1557,7 +1576,7 @@ __kernel void createBodyNodes(RVPtr x, RVPtr y, RVPtr z,
 }
 
 
-//Split function available here: https://devblogs.nvidia.com/parallelforall/thinking-parallel-part-iii-tree-construction-gpu/
+//Split/range function available here: https://devblogs.nvidia.com/parallelforall/thinking-parallel-part-iii-tree-construction-gpu/
 inline int findSplit(UVPtr mCodes, int first, int last){
     uint fCode = mCodes[first];
     uint lCode = mCodes[last];
@@ -1676,8 +1695,7 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     nodeCounts[g] = 0;
 
     barrier(CLK_GLOBAL_MEM_FENCE | CLK_LOCAL_MEM_FENCE);
-
-    int2 range = findRange(mCodes_G, EFFNBODY, g);
+    int2 range = findRange(mCodes_G, get_global_size(0) + 1, g);
     gpuBinaryTree[g + offset].mass = mad(mass[g], (range.y - range.x), mass[g]);
     gpuBinaryTree[g + offset].pos[0] = mass[g] * x[g];
     gpuBinaryTree[g + offset].pos[1] = mass[g] * y[g];
@@ -1695,6 +1713,7 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
     int split = findSplit(mCodes_G, range.x, range.y);
 
     uint delta = clz(mCodes_G[split]^mCodes_G[split+1]) - 2;
+
     gpuBinaryTree[g + offset].delta = delta;    
     if(split == range.x){
         gpuBinaryTree[g + offset].children[0] = split;
@@ -1712,8 +1731,7 @@ __kernel void constructTree(RVPtr x, RVPtr y, RVPtr z,
         gpuBinaryTree[split + 1 + offset].parent = g + offset;
     }
     gpuBinaryTree[g + offset].prefix = mCodes_G[g];
-    gpuBinaryTree[g + offset].prefix >>= (30 - delta);\
-
+    gpuBinaryTree[g + offset].prefix >>= (30 - delta);
     if(g == 0){
         gpuBinaryTree[g + offset].parent = 0 + offset;
     }
@@ -1732,6 +1750,7 @@ __kernel void countOctNodes(RVPtr x, RVPtr y, RVPtr z,
     uint group = (uint) get_group_id(0);
 
     uint offset = GLOBALOFFSET;
+    nodeCounts[g] = 0;
 
     if(g != 0){
         // NVPtr node = &gpuBinaryTree[g];
@@ -1743,6 +1762,11 @@ __kernel void countOctNodes(RVPtr x, RVPtr y, RVPtr z,
     else{
         nodeCounts[g] = 0;
     }
+}
+
+__kernel void prefixClearSwap(UVPtr swap){
+    uint g = (uint) get_global_id(0);
+    swap[g] = 0;
 }
 
 __kernel void prefixSumInclusiveUtil(UVPtr nodeCounts, UVPtr swap){
@@ -1863,7 +1887,7 @@ __kernel void constructOctTree(RVPtr x, RVPtr y, RVPtr z,
                 inclusiveTree[index].parent = 0 + offset;
                 inclusiveTree[0 + offset].children[childIndex] = inclusiveTree[index].id;
             }
-            // inclusiveTree[index].treeLevel = childIndex;
+            inclusiveTree[index].treeLevel = childIndex;
         }
     }
     else{
@@ -1906,11 +1930,11 @@ kernel void linkOctree(RVPtr x, RVPtr y, RVPtr z,
     uint degenerateMcode = 0;
 
     if(g != 0){
-        degenerateMcode = mCodes_G[g] == mCodes_G[g - 1];
+        degenerateMcode = inclusiveTree[g].mortonCode == inclusiveTree[g - 1].mortonCode;
     }
     
     while(leafFound == 0){
-        uint currentChunk = extractBits(mCodes_G[g], 9 - chunkLevel);
+        uint currentChunk = extractBits(inclusiveTree[g].mortonCode, 9 - chunkLevel);
         if(inclusiveTree[index].children[currentChunk] > (0 + offset)){
             index = inclusiveTree[index].children[currentChunk];
         }

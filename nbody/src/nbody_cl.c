@@ -709,9 +709,12 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
 //    kernels->testAddition = mwCreateKernel(program, "testAddition");
     kernels->boundingBox = mwCreateKernel(program, "boundingBox");
     kernels->encodeTree = mwCreateKernel(program, "encodeTree");
+    kernels->countDuplicates = mwCreateKernel(program, "countDuplicates");
+    kernels->compactMortonCodes = mwCreateKernel(program, "compactMortonCodes");
     kernels->bitonicMortonSort = mwCreateKernel(program, "bitonicMortonSort");
     kernels->constructTree = mwCreateKernel(program, "constructTree");
     kernels->countOctNodes = mwCreateKernel(program, "countOctNodes");
+    kernels->prefixClearSwap = mwCreateKernel(program, "prefixClearSwap");
     kernels->prefixSum = mwCreateKernel(program, "prefixSum");
     kernels->prefixSumUpsweep = mwCreateKernel(program, "prefixSumUpsweep");
     kernels->prefixSumDownsweep = mwCreateKernel(program, "prefixSumDownsweep");
@@ -737,6 +740,9 @@ static cl_bool nbCreateKernels(cl_program program, NBodyKernels* kernels)
     // kernels->outputData = mwCreateKernel(program, "outputData");
     return(     kernels->boundingBox
             &&  kernels->encodeTree
+            &&  kernels->countDuplicates
+            &&  kernels->compactMortonCodes
+            &&  kernels->prefixClearSwap
             &&  kernels->prefixSumUpsweep
             &&  kernels->prefixSumDownsweep
             &&  kernels->prefixSumInclusiveUtil
@@ -1302,6 +1308,148 @@ static cl_int nbEncodeTree(NBodyState* st, cl_bool updateState)
     return CL_SUCCESS;
 }
 
+static cl_int nbCompactMortonCodes(NBodyState* st, cl_bool updateState)
+{
+    cl_int err;
+    size_t chunk;
+    size_t nChunk;
+    cl_int upperBound;
+    size_t global[1];
+    size_t local[1];
+    size_t offset[1];
+    cl_event encodeEv;
+    cl_kernel encodeTree;
+    CLInfo* ci = st->ci;
+    NBodyKernels* kernels = st->kernels;
+    NBodyWorkSizes* ws = st->workSizes;
+    cl_int effNBody = st->effNBody;
+
+
+    
+    // countDuplicates = kernels->encodeTree;
+    global[0] = st->effNBody;
+    local[0] = ws->local[0];
+    
+
+    //////////////////////////////////////
+    //COUNT
+    /////////////////////////////////////
+    cl_event ev;
+    err |= clSetKernelArg(kernels->countDuplicates, 0, sizeof(cl_mem), &(st->nbb->mCodes));
+    err |= clSetKernelArg(kernels->countDuplicates, 1, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clEnqueueNDRangeKernel(ci->queue, kernels->countDuplicates, 1,
+                                0, global, local,
+                                0, NULL, &ev);
+    if (err != CL_SUCCESS)
+        return err;
+
+
+    ////////////////////////////////////
+    //PREFIX SUM
+    ////////////////////////////////////
+    //CLEAR PREFIX SUM SWAP BUFFER
+    err |= clSetKernelArg(kernels->prefixClearSwap, 0, sizeof(cl_mem), &(st->nbb->swap));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixClearSwap, 1,
+        0, global, NULL,
+        0, NULL, &ev);
+        
+    if(err != CL_SUCCESS)
+        return err;
+    
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+
+    // STORE NODE COUNTS FOR INCLUSIVE PREFIX SUM:
+    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->swap));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
+        0, global, NULL,
+        0, NULL, &ev);
+        
+    if(err != CL_SUCCESS)
+        return err;
+
+
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+
+    // PREFIX SUM UPSWEEP:
+
+    uint *value = 0;
+    err |= clEnqueueWriteBuffer(st->ci->queue,
+                            st->nbb->iteration,
+                            CL_TRUE,
+                            0, sizeof(uint), value,
+                            0, NULL, NULL);
+    err = clSetKernelArg(kernels->prefixSumUpsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clSetKernelArg(kernels->prefixSumUpsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
+    for(int i = 0; i < log2(st->effNBody); ++i){
+        global[0] = st->effNBody >> (i + 1);
+        err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumUpsweep, 1,
+                                    0, global, NULL,
+                                    0, NULL, &ev);
+        if (err != CL_SUCCESS)
+        return err;
+    }
+
+
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+
+    //PREFIX SUM DOWNSWEEP:
+    err = clSetKernelArg(kernels->prefixSumDownsweep, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clSetKernelArg(kernels->prefixSumDownsweep, 1, sizeof(cl_mem), &(st->nbb->iteration));
+    for(int i = 0; i < log2(st->effNBody); ++i){
+        global[0] = 1 << (i);
+        // printf("%d\n", global[0]);
+        err = clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumDownsweep, 1,
+                                    0, global, NULL,
+                                    0, NULL, &ev);
+        if (err != CL_SUCCESS)
+        return err;
+    }
+
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+
+    
+    // ADD STORED NODE COUNTS FOR INCLUSIVE PREFIX SUM:
+    global[0] = st->effNBody;
+    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->swap));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixSumInclusiveUtil, 1,
+        0, global, NULL,
+        0, NULL, &ev);
+        
+    if(err != CL_SUCCESS)
+        return err;
+
+
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+    
+    
+    //////////////////////////////////////
+    //COMPRESS
+    /////////////////////////////////////
+    err |= clSetKernelArg(kernels->compactMortonCodes, 0, sizeof(cl_mem), &(st->nbb->mCodes));
+    err |= clSetKernelArg(kernels->compactMortonCodes, 1, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err = clEnqueueNDRangeKernel(ci->queue, kernels->compactMortonCodes, 1,
+                                0, global, local,
+                                0, NULL, &ev);
+    if (err != CL_SUCCESS)
+        return err;
+
+    clFinish(ci->queue);
+    
+    return CL_SUCCESS;
+}
+
 static cl_int nbClearBuffers(NBodyState* st, cl_bool updateState)
 {
     cl_int err; 
@@ -1355,7 +1503,17 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     cl_event ev;
 
     
-
+    uint32_t* nC = calloc(st->effNBody, sizeof(uint32_t));
+    err |= clEnqueueReadBuffer(st->ci->queue,
+                            st->nbb->nodeCounts,
+                            CL_TRUE,
+                            0, st->effNBody*sizeof(uint32_t), nC,
+                            0, NULL, NULL);
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+    int reducedSize = st->effNBody - nC[st->effNBody - 1];
+    printf("%d<<<<<<<<<<<<<<<<<<<<<\n", reducedSize);
     clFinish(ci->queue);
     // printf("NODE COUNTS:\n");
     err |= clSetKernelArg(kernels->createBodyNodes, 18, sizeof(cl_mem), &(st->nbb->inclusiveTree));
@@ -1371,7 +1529,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
         return err;
 
     // printf("BEGINNING TREE CONSTRUCTION\n");
-    global[0] = st->effNBody - 1;
+    global[0] = reducedSize - 1;
     err = clSetKernelArg(kernels->constructTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->constructTree, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->constructTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1385,8 +1543,24 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     if (err != CL_SUCCESS)
         return err;
 
-    global[0] = st->effNBody;
+    // global[0] = st->effNBody;
+    // nC[st->effNBody - 1] += 1;
 
+
+    // CLEAR NODE COUNTS
+    global[0] = st->effNBody;
+    err |= clSetKernelArg(kernels->prefixClearSwap, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixClearSwap, 1,
+        0, global, NULL,
+        0, NULL, &ev);
+    err = clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+
+        
+    if(err != CL_SUCCESS)
+        return err;
+    global[0] = reducedSize - 1;
     err = clSetKernelArg(kernels->countOctNodes, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->countOctNodes, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->countOctNodes, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1399,6 +1573,22 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     err |= clEnqueueBarrier(ci->queue);
     if (err != CL_SUCCESS)
         return err;
+
+
+    global[0] = st->effNBody;
+    //CLEAR PREFIX SUM SWAP BUFFER
+    err |= clSetKernelArg(kernels->prefixClearSwap, 0, sizeof(cl_mem), &(st->nbb->swap));
+    err |= clEnqueueNDRangeKernel(ci->queue, kernels->prefixClearSwap, 1,
+        0, global, NULL,
+        0, NULL, &ev);
+        
+    if(err != CL_SUCCESS)
+        return err;
+    
+    err |= clEnqueueBarrier(ci->queue);
+    if (err != CL_SUCCESS)
+        return err;
+
 
     // STORE NODE COUNTS FOR INCLUSIVE PREFIX SUM:
     err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1474,10 +1664,10 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
         return err;
     
     
-    // // printf("%d<<<<<<<<<<<<<<<<<<\n", nC[st->effNBody - 1]);
+    // printf("%d<<<<<<<<<<<<<<<<<<\n", nC[reducedSize - 1]);
     
-    //THIS IS THE PROBLEM HERE:
-    global[0] = st->effNBody - 1;
+    // THIS IS THE PROBLEM HERE:
+    global[0] = reducedSize - 1;
     err = clSetKernelArg(kernels->constructOctTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
     err = clSetKernelArg(kernels->constructOctTree, 19, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clSetKernelArg(kernels->constructOctTree, 20, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1490,7 +1680,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
         return err;
 
         
-    // NODE COUNTS:
+    // // NODE COUNTS:
         
     global[0] = st->effNBody;
     err = clSetKernelArg(kernels->linkOctree, 18, sizeof(cl_mem), &(st->nbb->bodyParents));    
@@ -1508,18 +1698,18 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
 
 
-    uint32_t* nC = calloc(st->effNBody, sizeof(uint32_t));
+    uint32_t* nCO = calloc(st->effNBody, sizeof(uint32_t));
     err |= clEnqueueReadBuffer(st->ci->queue,
                             st->nbb->nodeCounts,
                             CL_TRUE,
-                            0, st->effNBody*sizeof(uint32_t), nC,
+                            0, st->effNBody*sizeof(uint32_t), nCO,
                             0, NULL, NULL);
     err |= clEnqueueBarrier(ci->queue);
     if (err != CL_SUCCESS)
         return err;
-    nC[st->effNBody - 1] += 1; //Add one to account for root node
+    nCO[st->effNBody - 1] += 1; //Add one to account for root node
 
-    global[0] = nC[st->effNBody - 1];
+    global[0] = nCO[st->effNBody - 1];
     err = clSetKernelArg(kernels->computeNodeStats, 18, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err = clEnqueueNDRangeKernel(ci->queue, kernels->computeNodeStats, 1,
                                 0, global, NULL,
@@ -1543,6 +1733,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
     clFinish(ci->queue);
     free(nC);
+    free(nCO);
     return CL_SUCCESS;
 }
 
@@ -2613,13 +2804,18 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
     printf("----------------------------\n");
     fflush(NULL);
 
+    int numCollisions = 0;
     printf("----------------------------\n");
     printf("TREE CONSTRUCTION:\n");
     printf("MORTON CODES:\n");
     printf("- - - - - - - - - - - - - - \n");
     for(int i = 0; i < st->effNBody; ++i){
         printBinary(gData->mCodes[i]);
-        printf("\tID: %d\tPARENT: %d\t C:\t%d\t%d", gData->gpuTree[i + offset].id, gData->gpuTree[i + offset].parent, gData->gpuTree[i + offset].children[0], gData->gpuTree[i + offset].children[1]);
+        printf("\tID: %d\tdC:%d", i, gData->nodeCounts[i]);
+        if(gData->mCodes[i] == gData->mCodes[i + 1] && i < st->effNBody - 1){
+            printf("\t<");
+            ++numCollisions;
+        } 
         printf("\n");
     }
     printf("----------------------------\n");
@@ -2631,7 +2827,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
     printf("----------------------------\n");
     printf("GPU OCTREE:\n");
     int count[10] = {0};
-    int numCollisions = 0;
+    // int numCollisions = 0;
     for(int i = 0; i < octCount; ++i){
         ++count[gData->inclusiveTree[i].treeLevel];
         if(i == st->effNBody){
@@ -2639,7 +2835,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
         }
         if(i < st->effNBody){
             printBinary(gData->inclusiveTree[i].mortonCode);
-            printf("\tID: %d\tL: %d\tR: %.2f\t ME: %.3f\tCOM: (%6.2f, %6.2f, %6.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->inclusiveTree[i].treeLevel, gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->inclusiveTree[i].parent);
+            printf("\tID: %d\tD:%d\tN: %d\tR: %.2f\t ME: %.3f\tCOM: (%6.2f, %6.2f, %6.2f)\tN: %d\tM: %d\tP: %d\tC:", gData->inclusiveTree[i].id, gData->gpuTree[i+offset].delta, gData->nodeCounts[i], gData->inclusiveTree[i].radius, gData->inclusiveTree[i].mass, gData->inclusiveTree[i].pos[0], gData->inclusiveTree[i].pos[1], gData->inclusiveTree[i].pos[2], gData->inclusiveTree[i].next, gData->inclusiveTree[i].more, gData->gpuTree[i+offset].parent-offset);
             for(int j = 0; j < 2; ++j){
                 if(gData->inclusiveTree[i+offset].children[j] > offset){
                     printf("(%d)\t", gData->gpuTree[i+offset].children[j]);
@@ -2674,7 +2870,7 @@ void printDebugStatus(const NBodyCtx* ctx, NBodyState* st, gpuData* gData){
 
         printf("\n");
     }
-    printf("NUM COLLISIONS: %d\n", numCollisions);
+    // printf("NUM COLLISIONS: %d\n", numCollisions);
 
     // printf("---------------------------\n");
     // printf("LEVEL INFORMATION:\n");
@@ -2734,6 +2930,14 @@ NBodyStatus nbRunTreeConstruction(const NBodyCtx* ctx, NBodyState* st, gpuData* 
     }
     gettimeofday(&end[2], NULL);
 
+    // gettimeofday(&start[2], NULL);
+    err = nbCompactMortonCodes(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing morton compression kernel");
+        return NBODY_CL_ERROR;
+    }
+    // gettimeofday(&end[2], NULL);
+
     gettimeofday(&start[3], NULL);
     err = nbConstructTree(st, CL_TRUE);
     if(err != CL_SUCCESS){
@@ -2742,17 +2946,17 @@ NBodyStatus nbRunTreeConstruction(const NBodyCtx* ctx, NBodyState* st, gpuData* 
     }
     gettimeofday(&end[3], NULL);
 
-    // printDebugStatus(ctx, st, &gData);
-    // printf("STEP: %d\n", st->step);
-    // readGPUBuffers(st, &gData);
+    // // printDebugStatus(ctx, st, &gData);
+    // // printf("STEP: %d\n", st->step);
+    // // readGPUBuffers(st, &gData);
 
-    gettimeofday(&start[4], NULL);
-    err = nbForceCalculationTreecode(st, CL_TRUE);
-    if(err != CL_SUCCESS){
-        mwPerrorCL(err, "Error executing force calculation kernel");
-        return NBODY_CL_ERROR;
-    }
-    gettimeofday(&end[4], NULL);
+    // gettimeofday(&start[4], NULL);
+    // err = nbForceCalculationTreecode(st, CL_TRUE);
+    // if(err != CL_SUCCESS){
+    //     mwPerrorCL(err, "Error executing force calculation kernel");
+    //     return NBODY_CL_ERROR;
+    // }
+    // gettimeofday(&end[4], NULL);
 
     // if(st->step < ctx->nStep - 1){
     //     err = nbClearBuffers(st, CL_TRUE);
@@ -2807,6 +3011,7 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         /////////////////////////////////////////////////////////////////////
         //TREE CONSTRUCTION
         nbRunTreeConstruction(ctx, st, &gData, start, end);
+        printf("STEP: %d\n", st->step);
         ++st->step;
     }
     gettimeofday(&end[5], NULL);
@@ -2869,7 +3074,7 @@ NBodyStatus nbStepSystemCL(const NBodyCtx* ctx, NBodyState* st)
 
 NBodyStatus nbStripBodiesSoA(NBodyState* st, gpuData* gData){ //Function to strip bodies out of GPU Tree
 //   printf("STRIPPING BODIES FROM BUFFER STRUCTURE\n");
-//   printf("A: (%6.2f, %6.2f, %6.2f)\n", gData->acc[0][0], gData->acc[1][0], gData->acc[2][0]);
+  printf("A: (%6.2f, %6.2f, %6.2f)\n", gData->acc[0][0], gData->acc[1][0], gData->acc[2][0]);
   int n = st->effNBody;
   for(int i = 0; i < n; ++i){
     if(i < st->nbody){
