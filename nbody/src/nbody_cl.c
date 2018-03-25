@@ -1803,7 +1803,7 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     cl_int effNBody = st->effNBody;
 
     global[0] = st->effNBody;
-    local[0] = ws->local[0];//1;
+    local[0] = 128;//ws->local[0];//1;
     cl_event ev;
 
     err |= nbSetMemArrayArgs(kernels->forceCalculationTreecode, st->nbb->pos, 0);
@@ -1812,7 +1812,7 @@ static cl_int nbForceCalculationTreecode(NBodyState* st, cl_bool updateState)
     err |= clSetKernelArg(kernels->forceCalculationTreecode, 9, sizeof(cl_mem), &(st->nbb->mass));
     err |= clSetKernelArg(kernels->forceCalculationTreecode, 10, sizeof(cl_mem), &(st->nbb->inclusiveTree));
     err |= clEnqueueNDRangeKernel(ci->queue, kernels->forceCalculationTreecode, 1,
-                                0, global, NULL,
+                                0, global, local,
                                 0, NULL, &ev);
 
     clFinish(ci->queue);
@@ -2947,67 +2947,64 @@ NBodyStatus nbRunTreeConstruction(const NBodyCtx* ctx, NBodyState* st, gpuData* 
     }
 
 
-    gettimeofday(&start[0], NULL);
+    gettimeofday(&start[1], NULL);
     err = nbBoundingBox(st, CL_TRUE);
     if (err != CL_SUCCESS)
     {
         mwPerrorCL(err, "Error executing bounding box kernel");
         return NBODY_CL_ERROR;
     }
-    gettimeofday(&end[0], NULL);
+    gettimeofday(&end[1], NULL);
 
-    gettimeofday(&start[1], NULL);
+    gettimeofday(&start[2], NULL);
     //RUN TREE CONSTRUCTION KERNEL:
     err = nbEncodeTree(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing tree construction kernel");
         return NBODY_CL_ERROR;
     }
-    gettimeofday(&end[1], NULL);
+    gettimeofday(&end[2], NULL);
 
-    gettimeofday(&start[2], NULL);
+    gettimeofday(&start[3], NULL);
     err = nbBitonicMortonSort(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing morton sorting kernel");
         return NBODY_CL_ERROR;
     }
-    gettimeofday(&end[2], NULL);
+    gettimeofday(&end[3], NULL);
 
-    // gettimeofday(&start[2], NULL);
+    gettimeofday(&start[4], NULL);
     err = nbCreateBodies(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing body creation kernel");
         return NBODY_CL_ERROR;
     }
-    // gettimeofday(&end[2], NULL);
-
-    // gettimeofday(&start[2], NULL);
     err = nbCompactMortonCodes(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing morton compression kernel");
         return NBODY_CL_ERROR;
     }
-    // gettimeofday(&end[2], NULL);
+    gettimeofday(&end[4], NULL);
 
-    gettimeofday(&start[3], NULL);
+    gettimeofday(&start[6], NULL);
     err = nbConstructTree(st, CL_TRUE);
     if(err != CL_SUCCESS){
         mwPerrorCL(err, "Error executing tree construction kernel");
         return NBODY_CL_ERROR;
     }
-    gettimeofday(&end[3], NULL);
+    gettimeofday(&end[6], NULL);
 
     // // printDebugStatus(ctx, st, &gData);
     // printf("STEP: %d\n", st->step);
     // // readGPUBuffers(st, &gData);
 
-    gettimeofday(&start[4], NULL);
-    err = nbForceCalculationTreecode(st, CL_TRUE);
-    if(err != CL_SUCCESS){
-        mwPerrorCL(err, "Error executing force calculation kernel");
-        return NBODY_CL_ERROR;
-    }
-    gettimeofday(&end[4], NULL);
+    gettimeofday(&start[7], NULL);
+    // err = nbForceCalculationTreecode(st, CL_TRUE);
+    // if(err != CL_SUCCESS){
+    //     mwPerrorCL(err, "Error executing force calculation kernel");
+    //     return NBODY_CL_ERROR;
+    // }
+    gettimeofday(&end[7], NULL);
 
     return CL_SUCCESS;
 }
@@ -3026,12 +3023,12 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     int n = st->effNBody;
 
     //BEGIN TIMING
-    struct timeval start[6], end[6];
+    struct timeval start[8], end[8];
     // sleep(1);
     writeGPUBuffers(st, &gData);
     //HANDLE RUNNING BOUNDING BOX HERE:
-    gettimeofday(&start[5], NULL);
-    nbRunTreeConstruction(ctx, st, &gData, start, end);
+    gettimeofday(&start[0], NULL);
+    nbRunTreeConstruction(ctx, st, &gData, &start, &end);
     while(st->step < ctx->nStep){
         
         err = nbAdvanceHalfVelocityTreecode(st, CL_TRUE);
@@ -3054,56 +3051,74 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         }
         /////////////////////////////////////////////////////////////////////
         //TREE CONSTRUCTION
-        nbRunTreeConstruction(ctx, st, &gData, start, end);
+        nbRunTreeConstruction(ctx, st, &gData, &start, &end);
         printf("STEP: %d\n", st->step);
         ++st->step;
     }
     clFinish(ci->queue);
-    gettimeofday(&end[5], NULL);
+    gettimeofday(&end[0], NULL);
     readGPUBuffers(st, &gData);
     // printDebugStatus(ctx, st, &gData);
-
     printf("==============================\n");
     printf("BOUNDING BOX EXECUTION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
-    printf("%.4f ms\n", (((real)end[0].tv_sec + (real)end[0].tv_usec * (1.0/1000000)) - ((real)start[0].tv_sec + (real)start[0].tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f ms\n", (((real)end[0].tv_sec + (real)end[1].tv_usec * (1.0/1000000)) - ((real)start[1].tv_sec + (real)start[1].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
     
     printf("==============================\n");
     printf("MORTON CODE GENERATION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
-    printf("%.4f ms\n", (((real)end[1].tv_sec + (real)end[1].tv_usec * (1.0/1000000)) - ((real)start[1].tv_sec + (real)start[1].tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f ms\n", (((real)end[2].tv_sec + (real)end[2].tv_usec * (1.0/1000000)) - ((real)start[2].tv_sec + (real)start[2].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
 
     printf("==============================\n");
     printf("MORTON CODE SORT EXECUTION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
-    printf("%.4f ms\n", (((real)end[2].tv_sec + (real)end[2].tv_usec * (1.0/1000000)) - ((real)start[2].tv_sec + (real)start[2].tv_usec * (1.0/1000000))) * 1000);
-    printf("==============================\n");
-    fflush(NULL);
-
-    printf("==============================\n");
-    printf("TREE CONSTRUCTION EXECUTION TIME:\n");
-    // printf("%.4f ms\n", (endT - startT) * 1000);
     printf("%.4f ms\n", (((real)end[3].tv_sec + (real)end[3].tv_usec * (1.0/1000000)) - ((real)start[3].tv_sec + (real)start[3].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
 
     printf("==============================\n");
-    printf("FORCE CALCULATION EXECUTION TIME:\n");
+    printf("MORTON CODE COMPACTION EXECUTION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
     printf("%.4f ms\n", (((real)end[4].tv_sec + (real)end[4].tv_usec * (1.0/1000000)) - ((real)start[4].tv_sec + (real)start[4].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
 
     printf("==============================\n");
-    printf("TOTAL EXECUTION TIME:\n");
+    printf("TREE CONSTRUCTION EXECUTION TIME:\n");
     // printf("%.4f ms\n", (endT - startT) * 1000);
-    printf("%.4f ms\n", (((real)end[5].tv_sec + (real)end[5].tv_usec * (1.0/1000000)) - ((real)start[5].tv_sec + (real)start[5].tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f ms\n", (((real)end[6].tv_sec + (real)end[6].tv_usec * (1.0/1000000)) - ((real)start[6].tv_sec + (real)start[6].tv_usec * (1.0/1000000))) * 1000);
     printf("==============================\n");
     fflush(NULL);
+
+    printf("==============================\n");
+    printf("FORCE CALCULATION EXECUTION TIME:\n");
+    // printf("%.4f ms\n", (endT - startT) * 1000);
+    printf("%.4f ms\n", (((real)end[7].tv_sec + (real)end[7].tv_usec * (1.0/1000000)) - ((real)start[7].tv_sec + (real)start[7].tv_usec * (1.0/1000000))) * 1000);
+    printf("==============================\n");
+    fflush(NULL);
+
+    printf("==============================\n");
+    printf("TOTAL EXECUTION TIME:\n");
+    // printf("%.4f ms\n", (endT - startT) * 1000);
+    printf("%.4f ms\n", (((real)end[0].tv_sec + (real)end[0].tv_usec * (1.0/1000000)) - ((real)start[0].tv_sec + (real)start[0].tv_usec * (1.0/1000000))) * 1000);
+    printf("==============================\n");
+    fflush(NULL);
+
+    printf("%d, ", st->effNBody);
+    printf("%.4f, ", (((real)end[1].tv_sec + (real)end[1].tv_usec * (1.0/1000000)) - ((real)start[1].tv_sec + (real)start[1].tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f, ", (((real)end[2].tv_sec + (real)end[2].tv_usec * (1.0/1000000)) - ((real)start[2].tv_sec + (real)start[2].tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f, ", (((real)end[3].tv_sec + (real)end[3].tv_usec * (1.0/1000000)) - ((real)start[3].tv_sec + (real)start[3].tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f, ", (((real)end[4].tv_sec + (real)end[4].tv_usec * (1.0/1000000)) - ((real)start[4].tv_sec + (real)start[4].tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f ", (((real)end[6].tv_sec + (real)end[6].tv_usec * (1.0/1000000)) - ((real)start[6].tv_sec + (real)start[6].tv_usec * (1.0/1000000))) * 1000);
+    // printf("%.4f, ", (((real)end[7].tv_sec + (real)end[7].tv_usec * (1.0/1000000)) - ((real)start[7].tv_sec + (real)start[7].tv_usec * (1.0/1000000))) * 1000);
+    // printf("%.4f", (((real)end[0].tv_sec + (real)end[0].tv_usec * (1.0/1000000)) - ((real)start[0].tv_sec + (real)start[0].tv_usec * (1.0/1000000))) * 1000);
+    printf("\n");
+
+
     nbStripBodiesSoA(st, &gData);
     NBodyStatus rc = nbMakeTree(ctx, st);
     if (nbStatusIsFatal(rc))

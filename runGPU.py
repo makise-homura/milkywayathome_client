@@ -18,7 +18,7 @@ os.system('rm GPUACCTEST.out')
 # print "RUNNING GPU SYSTEM:"
 os.chdir('../build')
 if("-b" in sys.argv):
-    os.system("cmake ../milkywayathome_client -DBOINC_APPLICATION=OFF -DNBODY_OPENCL=ON -DDOUBLEPREC=OFF -DCMAKE_BUILD_TYPE=RELEASE ")
+    os.system("cmake ../milkywayathome_client -DBOINC_APPLICATION=OFF -DNBODY_OPENCL=ON -DDOUBLEPREC=ON -DCMAKE_BUILD_TYPE=RELEASE ")
     os.system('make -j 9')
 if("-m" in sys.argv):
     os.system('make -j 9')

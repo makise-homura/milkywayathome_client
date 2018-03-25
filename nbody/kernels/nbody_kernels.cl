@@ -2042,14 +2042,17 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
 
     int numForceCalc = 0;
     int i = 0;
+    int truthValue = 0;
     do{
         // barrier(CLK_GLOBAL_MEM_FENCE);
         drVec.x = inclusiveTree[currentIndex].pos[0] - inclusiveTree[g].pos[0];
         drVec.y = inclusiveTree[currentIndex].pos[1] - inclusiveTree[g].pos[1];
         drVec.z = inclusiveTree[currentIndex].pos[2] - inclusiveTree[g].pos[2];
         real dr2 = mad(drVec.x, drVec.x, mad(drVec.y, drVec.y, mad(drVec.z, drVec.z, EPS2)));
-        if((inclusiveTree[currentIndex].isBody) || (dr2 >= inclusiveTree[currentIndex].rCrit2)){
-        // if((inclusiveTree[currentIndex].isBody)){
+        // truthValue = (dr2 >= inclusiveTree[currentIndex].rCrit2) || (inclusiveTree[currentIndex].isBody);
+        // truthValue = inclusiveTree[currentIndex].isBody;
+        // if((inclusiveTree[currentIndex].isBody) || (dr2 >= inclusiveTree[currentIndex].rCrit2)){
+        if((inclusiveTree[currentIndex].isBody)){
             ++numForceCalc;
             int notSelf = inclusiveTree[currentIndex].id != inclusiveTree[g].id;
             real dr = sqrt(dr2);
@@ -2058,15 +2061,17 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
             a.x += ai * drVec.x * notSelf;
             a.y += ai * drVec.y * notSelf;
             a.z += ai * drVec.z * notSelf;
+        // currentIndex = inclusiveTree[currentIndex].next * truthValue + 
+                        // inclusiveTree[currentIndex].more * !(truthValue);
             currentIndex = inclusiveTree[currentIndex].next;
         }
         else{
-                currentIndex = inclusiveTree[currentIndex].more;
+            currentIndex = inclusiveTree[currentIndex].more;
         }
         ++i;
-        if(currentIndex > EFFNBODY + offset || currentIndex < 0){
-            break;
-        }
+        // if(currentIndex > EFFNBODY + offset || currentIndex < 0){
+        //     break;
+        // }
     }while(currentIndex != rootIndex);
     // }while(i < 1552);
     if(USE_EXTERNAL_POTENTIAL)
@@ -2079,12 +2084,12 @@ kernel void forceCalculationTreecode(RVPtr x, RVPtr y, RVPtr z,
     // inclusiveTree[g].acc[0] = a.x;
     // inclusiveTree[g].acc[1] = a.y;
     // inclusiveTree[g].acc[2] = a.z;
-    // ax[g] = numForceCalc;
-    // ay[g] = currentIndex;
-    // az[g] = i;
-    ax[g] = a.x;
-    ay[g] = a.y;
-    az[g] = a.z;
+    ax[g] = numForceCalc;
+    ay[g] = currentIndex;
+    az[g] = i;
+    // ax[g] = a.x;
+    // ay[g] = a.y;
+    // az[g] = a.z;
 }
 
 kernel void verifyOctree(NVPtr octree, UVPtr verifArry){
