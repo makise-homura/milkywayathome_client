@@ -1571,10 +1571,9 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     err |= clEnqueueBarrier(ci->queue);
     if (err != CL_SUCCESS)
         return err;
-    int reducedSize = st->effNBody - nC[st->effNBody - 1];
     // printf("%d<<<<<<<<<<<<<<<<<<<<<\n", reducedSize);
     clFinish(ci->queue);
-
+    int reducedSize = st->effNBody - nC[st->effNBody - 1];
     // printf("BEGINNING TREE CONSTRUCTION\n");
     global[0] = reducedSize - 1;
     err = clSetKernelArg(kernels->constructTree, 18, sizeof(cl_mem), &(st->nbb->gpuTree));
@@ -1593,7 +1592,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     // global[0] = st->effNBody;
     // nC[st->effNBody - 1] += 1;
 
-    clFinish(ci->queue);
+    // clFinish(ci->queue);
     // CLEAR NODE COUNTS
     global[0] = st->effNBody;
     err |= clSetKernelArg(kernels->prefixClearSwap, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
@@ -1636,7 +1635,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     if (err != CL_SUCCESS)
         return err;
 
-    clFinish(ci->queue);
+    // clFinish(ci->queue);
     // STORE NODE COUNTS FOR INCLUSIVE PREFIX SUM:
     err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 0, sizeof(cl_mem), &(st->nbb->nodeCounts));
     err |= clSetKernelArg(kernels->prefixSumInclusiveUtil, 1, sizeof(cl_mem), &(st->nbb->swap));
@@ -1710,7 +1709,7 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
     if (err != CL_SUCCESS)
         return err;
     
-    clFinish(ci->queue);
+    // clFinish(ci->queue);
     // printf("%d<<<<<<<<<<<<<<<<<<\n", nC[reducedSize - 1]);
     
     // THIS IS THE PROBLEM HERE:
@@ -1743,7 +1742,6 @@ static cl_int nbConstructTree(NBodyState* st, cl_bool updateState)
 
 
 
-    clFinish(ci->queue);
     uint32_t* nCO = calloc(st->effNBody, sizeof(uint32_t));
     err |= clEnqueueReadBuffer(st->ci->queue,
                             st->nbb->nodeCounts,
@@ -2999,11 +2997,11 @@ NBodyStatus nbRunTreeConstruction(const NBodyCtx* ctx, NBodyState* st, gpuData* 
     // // readGPUBuffers(st, &gData);
 
     gettimeofday(&start[7], NULL);
-    // err = nbForceCalculationTreecode(st, CL_TRUE);
-    // if(err != CL_SUCCESS){
-    //     mwPerrorCL(err, "Error executing force calculation kernel");
-    //     return NBODY_CL_ERROR;
-    // }
+    err = nbForceCalculationTreecode(st, CL_TRUE);
+    if(err != CL_SUCCESS){
+        mwPerrorCL(err, "Error executing force calculation kernel");
+        return NBODY_CL_ERROR;
+    }
     gettimeofday(&end[7], NULL);
 
     return CL_SUCCESS;
@@ -3027,8 +3025,9 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     // sleep(1);
     writeGPUBuffers(st, &gData);
     //HANDLE RUNNING BOUNDING BOX HERE:
-    gettimeofday(&start[0], NULL);
+    // gettimeofday(&start[0], NULL);
     nbRunTreeConstruction(ctx, st, &gData, &start, &end);
+    // gettimeofday(&end[0], NULL);
     while(st->step < ctx->nStep){
         
         err = nbAdvanceHalfVelocityTreecode(st, CL_TRUE);
@@ -3055,8 +3054,8 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
         printf("STEP: %d\n", st->step);
         ++st->step;
     }
-    clFinish(ci->queue);
-    gettimeofday(&end[0], NULL);
+    // clFinish(ci->queue);
+    // gettimeofday(&end[0], NULL);
     readGPUBuffers(st, &gData);
     // printDebugStatus(ctx, st, &gData);
     printf("==============================\n");
@@ -3108,14 +3107,15 @@ NBodyStatus nbRunSystemCLTreecode(const NBodyCtx* ctx, NBodyState* st)
     printf("==============================\n");
     fflush(NULL);
 
-    printf("%d, ", st->effNBody);
-    printf("%.4f, ", (((real)end[1].tv_sec + (real)end[1].tv_usec * (1.0/1000000)) - ((real)start[1].tv_sec + (real)start[1].tv_usec * (1.0/1000000))) * 1000);
-    printf("%.4f, ", (((real)end[2].tv_sec + (real)end[2].tv_usec * (1.0/1000000)) - ((real)start[2].tv_sec + (real)start[2].tv_usec * (1.0/1000000))) * 1000);
-    printf("%.4f, ", (((real)end[3].tv_sec + (real)end[3].tv_usec * (1.0/1000000)) - ((real)start[3].tv_sec + (real)start[3].tv_usec * (1.0/1000000))) * 1000);
-    printf("%.4f, ", (((real)end[4].tv_sec + (real)end[4].tv_usec * (1.0/1000000)) - ((real)start[4].tv_sec + (real)start[4].tv_usec * (1.0/1000000))) * 1000);
-    printf("%.4f ", (((real)end[6].tv_sec + (real)end[6].tv_usec * (1.0/1000000)) - ((real)start[6].tv_sec + (real)start[6].tv_usec * (1.0/1000000))) * 1000);
+    // printf("%d, ", st->effNBody);
+    // printf("%.4f, ", (((real)end[1].tv_sec + (real)end[1].tv_usec * (1.0/1000000)) - ((real)start[1].tv_sec + (real)start[1].tv_usec * (1.0/1000000))) * 1000);    
+    // printf("%.4f, ", (((real)end[1].tv_sec + (real)end[1].tv_usec * (1.0/1000000)) - ((real)start[1].tv_sec + (real)start[1].tv_usec * (1.0/1000000))) * 1000);
+    // printf("%.4f, ", (((real)end[2].tv_sec + (real)end[2].tv_usec * (1.0/1000000)) - ((real)start[2].tv_sec + (real)start[2].tv_usec * (1.0/1000000))) * 1000);
+    // printf("%.4f, ", (((real)end[3].tv_sec + (real)end[3].tv_usec * (1.0/1000000)) - ((real)start[3].tv_sec + (real)start[3].tv_usec * (1.0/1000000))) * 1000);
+    // printf("%.4f, ", (((real)end[4].tv_sec + (real)end[4].tv_usec * (1.0/1000000)) - ((real)start[4].tv_sec + (real)start[4].tv_usec * (1.0/1000000))) * 1000);
+    // printf("%.4f ", (((real)end[6].tv_sec + (real)end[6].tv_usec * (1.0/1000000)) - ((real)start[6].tv_sec + (real)start[6].tv_usec * (1.0/1000000))) * 1000);
     // printf("%.4f, ", (((real)end[7].tv_sec + (real)end[7].tv_usec * (1.0/1000000)) - ((real)start[7].tv_sec + (real)start[7].tv_usec * (1.0/1000000))) * 1000);
-    // printf("%.4f", (((real)end[0].tv_sec + (real)end[0].tv_usec * (1.0/1000000)) - ((real)start[0].tv_sec + (real)start[0].tv_usec * (1.0/1000000))) * 1000);
+    printf("%.4f", (((real)end[0].tv_sec + (real)end[0].tv_usec * (1.0/1000000)) - ((real)start[0].tv_sec + (real)start[0].tv_usec * (1.0/1000000))) * 1000);
     printf("\n");
 
 

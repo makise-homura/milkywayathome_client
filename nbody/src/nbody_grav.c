@@ -81,7 +81,7 @@ static inline mwvector nbGravity(const NBodyCtx* ctx, NBodyState* st, const Body
                 acc0.y += mor3 * dr.y;
                 acc0.z += mor3 * dr.z;
                 
-                //temp.mass = Mass(q);
+                // temp.mass = Mass(q);
 
 //                 if (ctx->useQuad && isCell(q))          /* if cell, add quad term */
 //                 {

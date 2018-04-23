@@ -32,4 +32,4 @@ os.system(executeString)
 # print "==================================================================\n"
 os.system('./bin/milkyway_nbody -h CPU.hist -s GPU.hist')
 print "PLOTTING DATA"
-os.system('python2 PlotNbodyResidual.py GPUBRUTE.out CPUBRUTE.out GPU.hist CPU.hist')
+os.system('python2 PlotNbody.py GPUBRUTE.out CPUBRUTE.out')
